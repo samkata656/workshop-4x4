@@ -1,0 +1,30 @@
+# Development only: opens the app, Postgres and the n8n editor on THIS machine
+# (127.0.0.1), so you can test without setting up proxy hosts and so
+# `npm run dev` / `npm run db:init` / `npm run test:db` can reach the database.
+# Never use this file on the server.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+#   app      http://127.0.0.1:3000
+#   n8n      http://127.0.0.1:5678
+#   postgres 127.0.0.1:5432
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  app:
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  n8n:
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      # Plain http on localhost: the login cookie must not be "secure only",
+      # and links inside the editor must point at this address.
+      N8N_SECURE_COOKIE: "false"
+      N8N_PROTOCOL: http
+      N8N_EDITOR_BASE_URL: http://127.0.0.1:5678/
+      WEBHOOK_URL: http://127.0.0.1:5678/

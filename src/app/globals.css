@@ -1,0 +1,476 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens — Rugged Industrial × Luxury Automotive
+   One system for both the public site and the admin command centre.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-carbon: #171c19; /* page background */
+  --color-carbon-raised: #1d2420; /* cards, table headers */
+  --color-olive: #343d32; /* panels, secondary surfaces */
+  --color-rust: #c36a3c; /* the one accent: actions and alerts */
+  --color-rust-bright: #d98250;
+  --color-sand: #d9d1c3; /* secondary text, rules */
+  --color-paper: #f2f0e9; /* primary text */
+  --color-line: rgb(217 209 195 / 0.14); /* hairline borders */
+  --color-line-strong: rgb(217 209 195 / 0.32);
+  --color-muted: rgb(217 209 195 / 0.62); /* tertiary text */
+
+  --font-display: var(--font-display-face), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-ui-face), system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
+
+  --ease-mech: cubic-bezier(0.2, 0.8, 0.2, 1); /* quick start, firm stop */
+}
+
+html {
+  background: var(--color-carbon);
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-carbon);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1; /* tabular numbers: prices and litres line up */
+}
+
+::selection {
+  background: var(--color-rust);
+  color: var(--color-carbon);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-rust-bright);
+  outline-offset: 3px;
+}
+
+@layer components {
+  /* Oversized condensed headline. */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 800;
+    line-height: 0.88;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+
+  /* Technical label: "01 / УСЛУГИ". */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .label-accent {
+    color: var(--color-rust-bright);
+  }
+
+  /* Primary button: square, one corner machined off. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3rem;
+    padding: 0 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background: var(--color-rust);
+    color: var(--color-carbon);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+    transition: background-color 180ms var(--ease-mech);
+  }
+  .btn:hover {
+    background: var(--color-rust-bright);
+  }
+  .btn .arrow {
+    transition: transform 220ms var(--ease-mech);
+  }
+  .btn:hover .arrow {
+    transform: translateX(4px);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-paper);
+    clip-path: none;
+    border: 1px solid var(--color-line-strong);
+  }
+  .btn-ghost:hover {
+    background: rgb(217 209 195 / 0.08);
+  }
+
+  /* Status badge: a small square lamp plus a mono caption. */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-sand);
+  }
+  .badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+  }
+  .badge-warn {
+    color: var(--color-rust-bright);
+  }
+
+  /* Row that a rust index bar slides into on hover. */
+  .row-mech {
+    position: relative;
+    transition: background-color 200ms var(--ease-mech);
+  }
+  .row-mech::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--color-rust);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 260ms var(--ease-mech);
+  }
+  .row-mech:hover {
+    background: rgb(52 61 50 / 0.45);
+  }
+  .row-mech:hover::before {
+    transform: scaleY(1);
+  }
+
+  /* Survey grid behind the hero, fading out toward the edges. */
+  .survey-grid {
+    background-image:
+      linear-gradient(var(--color-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(120% 90% at 80% 10%, #000 0%, transparent 72%);
+  }
+
+  /* Outlined ghost numerals. */
+  .ghost {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 0.8;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--color-line-strong);
+    user-select: none;
+  }
+
+  /* Hazard hatch used as a thin divider accent. */
+  .hatch {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      var(--color-rust) 0 6px,
+      transparent 6px 12px
+    );
+  }
+
+  /* Staggered entrance. Set --i on each element. */
+  .reveal {
+    animation: reveal 700ms var(--ease-mech) both;
+    animation-delay: calc(var(--i, 0) * 90ms + 60ms);
+  }
+
+  .skeleton {
+    background: rgb(52 61 50 / 0.5);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 -20% 0);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal,
+  .skeleton {
+    animation: none;
+  }
+  .btn .arrow,
+  .row-mech,
+  .row-mech::before {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Forms
+--------------------------------------------------------------------------- */
+@layer components {
+  .field-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-sand);
+  }
+
+  .input {
+    display: block;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0 0.875rem;
+    font-size: 1rem; /* 16px: stops iOS zooming on focus */
+    color: var(--color-paper);
+    background: var(--color-carbon-raised);
+    border: 1px solid var(--color-line-strong);
+    border-radius: 0;
+    transition: border-color 160ms var(--ease-mech);
+  }
+  .input:hover:not(:disabled) {
+    border-color: var(--color-sand);
+  }
+  .input:disabled {
+    color: var(--color-muted);
+    border-color: var(--color-line);
+    cursor: not-allowed;
+  }
+  .input[aria-invalid="true"] {
+    border-color: var(--color-rust-bright);
+  }
+  select.input {
+    appearance: none;
+    padding-right: 2.5rem;
+    background-image: linear-gradient(45deg, transparent 50%, var(--color-sand) 50%),
+      linear-gradient(135deg, var(--color-sand) 50%, transparent 50%);
+    background-position: calc(100% - 1.125rem) 50%, calc(100% - 0.8125rem) 50%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  .field-error {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-rust-bright);
+  }
+
+  /* Square toggle used for days and start times. */
+  .chip {
+    min-height: 3rem;
+    padding: 0.5rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    text-align: center;
+    color: var(--color-paper);
+    background: transparent;
+    border: 1px solid var(--color-line-strong);
+    transition: background-color 160ms var(--ease-mech), border-color 160ms var(--ease-mech);
+  }
+  .chip:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: rgb(217 209 195 / 0.08);
+    border-color: var(--color-sand);
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-current="page"] {
+    color: var(--color-carbon);
+    background: var(--color-rust);
+    border-color: var(--color-rust);
+    font-weight: 600;
+  }
+  .chip:disabled {
+    color: var(--color-muted);
+    border-color: var(--color-line);
+    cursor: not-allowed;
+  }
+
+  /* Service row with a square checkbox. */
+  .check {
+    appearance: none;
+    flex: none;
+    width: 1.375rem;
+    height: 1.375rem;
+    margin: 0;
+    border: 1px solid var(--color-line-strong);
+    background: var(--color-carbon-raised);
+    display: grid;
+    place-content: center;
+  }
+  .check::before {
+    content: "";
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--color-rust);
+    transform: scale(0);
+    transition: transform 140ms var(--ease-mech);
+  }
+  .check:checked {
+    border-color: var(--color-rust);
+  }
+  .check:checked::before {
+    transform: scale(1);
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .check::before,
+  .chip,
+  .input {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Admin calendar (react-big-calendar) re-skinned to the design system.
+   Scoped under .bay-calendar so these rules win over the library's own CSS.
+--------------------------------------------------------------------------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.bay-calendar .rbc-calendar {
+  font-family: var(--font-sans);
+  color: var(--color-paper);
+}
+.bay-calendar .rbc-time-view {
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-carbon-raised);
+}
+.bay-calendar .rbc-time-header,
+.bay-calendar .rbc-time-header-content,
+.bay-calendar .rbc-time-header-gutter,
+.bay-calendar .rbc-time-content,
+.bay-calendar .rbc-time-content > * + * > *,
+.bay-calendar .rbc-timeslot-group,
+.bay-calendar .rbc-header,
+.bay-calendar .rbc-header + .rbc-header,
+.bay-calendar .rbc-day-bg + .rbc-day-bg,
+.bay-calendar .rbc-time-header.rbc-overflowing,
+.bay-calendar .rbc-row-resource {
+  border-color: var(--color-line);
+}
+.bay-calendar .rbc-time-content {
+  border-top: 1px solid var(--color-line-strong);
+}
+.bay-calendar .rbc-day-slot .rbc-time-slot {
+  border-top-color: rgb(217 209 195 / 0.05);
+}
+.bay-calendar .rbc-allday-cell {
+  display: none; /* workshop jobs are never all-day */
+}
+.bay-calendar .rbc-header,
+.bay-calendar .rbc-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+}
+.bay-calendar .rbc-header {
+  padding: 0.625rem 0.25rem;
+  white-space: normal;
+}
+.bay-calendar .rbc-row-resource .rbc-header {
+  color: var(--color-paper);
+  background: var(--color-olive);
+}
+.bay-calendar .rbc-today {
+  background: rgb(195 106 60 / 0.07);
+}
+.bay-calendar .rbc-current-time-indicator {
+  height: 2px;
+  background: var(--color-rust-bright);
+}
+.bay-calendar .rbc-event,
+.bay-calendar .rbc-day-slot .rbc-background-event {
+  border: 0;
+  border-left: 3px solid var(--color-rust);
+  border-radius: 0;
+  background: var(--color-olive);
+  color: var(--color-paper);
+  padding: 3px 6px;
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+.bay-calendar .rbc-day-slot .rbc-event {
+  border: 0;
+  border-left: 3px solid var(--color-rust);
+  outline: 1px solid var(--color-carbon-raised);
+}
+.bay-calendar .rbc-event-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--color-sand);
+}
+.bay-calendar .rbc-event.status-in_progress {
+  background: var(--color-rust);
+  border-left-color: var(--color-paper);
+  color: var(--color-carbon);
+}
+.bay-calendar .rbc-event.status-in_progress .rbc-event-label {
+  color: var(--color-carbon);
+}
+.bay-calendar .rbc-event.status-done {
+  background: rgb(52 61 50 / 0.45);
+  border-left-color: var(--color-sand);
+  color: var(--color-muted);
+}
+.bay-calendar .rbc-event.status-no_show {
+  background: transparent;
+  border-left-color: var(--color-muted);
+  outline: 1px dashed var(--color-line-strong);
+  color: var(--color-muted);
+}
+/* Keep the status colour when selected (the library would paint it blue). */
+.bay-calendar .rbc-event.rbc-selected {
+  background-color: var(--color-olive);
+}
+.bay-calendar .rbc-event.status-in_progress.rbc-selected {
+  background-color: var(--color-rust);
+}
+.bay-calendar .rbc-event.status-done.rbc-selected {
+  background-color: rgb(52 61 50 / 0.45);
+}
+.bay-calendar .rbc-event.status-no_show.rbc-selected {
+  background-color: transparent;
+}
+.bay-calendar .rbc-event.rbc-selected,
+.bay-calendar .rbc-event:focus-visible {
+  outline: 2px solid var(--color-rust-bright);
+  outline-offset: 1px;
+}
+.bay-calendar .rbc-addons-dnd .rbc-addons-dnd-drag-preview {
+  opacity: 0.75;
+}

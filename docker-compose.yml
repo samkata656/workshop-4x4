@@ -1,0 +1,137 @@
+# Workshop stack: app + Postgres + n8n + NGINX Proxy Manager.
+#
+#   docker compose up -d --build     start everything (migrations + seed run automatically)
+#   docker compose ps                see what is running and healthy
+#   docker compose logs -f app       watch the app
+#   docker compose down              stop (data stays in the named volumes)
+#   docker compose down -v           stop AND delete all data
+#
+# Only the proxy publishes ports. For local testing without the proxy, add the
+# dev override (see docker-compose.dev.yml).
+
+name: workshop-4x4
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      TZ: Europe/Sofia
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+    # No ports: the database is reachable only from other containers.
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?set ADMIN_PASSWORD_HASH in .env}
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env}
+      # Empty until the n8n workflows exist; the app then skips the AI step.
+      N8N_REPAIR_WEBHOOK_URL: ${N8N_REPAIR_WEBHOOK_URL:-}
+      N8N_MODIFICATION_WEBHOOK_URL: ${N8N_MODIFICATION_WEBHOOK_URL:-}
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
+      # Empty = the agent API (/api/agent/*) answers 503 to everyone.
+      AGENT_API_KEY: ${AGENT_API_KEY:-}
+      # On start the app creates n8n's separate database and login (scripts/db-init.ts).
+      N8N_DB_NAME: ${N8N_DB_NAME:-n8n}
+      N8N_DB_USER: ${N8N_DB_USER:-n8n}
+      N8N_DB_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD in .env}
+    networks:
+      - internal
+      - proxy
+    # No ports: the proxy reaches it as http://app:3000.
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:stable
+    restart: unless-stopped
+    depends_on:
+      # The app creates the n8n database before it reports healthy.
+      app:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: "5432"
+      DB_POSTGRESDB_DATABASE: ${N8N_DB_NAME:-n8n}
+      DB_POSTGRESDB_USER: ${N8N_DB_USER:-n8n}
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD in .env}
+      # Encrypts the credentials saved inside n8n. Never change it after first start.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env}
+      # The public address of the n8n editor, set up as a proxy host.
+      N8N_HOST: ${N8N_HOST:?set N8N_HOST in .env}
+      N8N_PROTOCOL: https
+      N8N_PORT: "5678"
+      N8N_PROXY_HOPS: "1"
+      N8N_EDITOR_BASE_URL: https://${N8N_HOST}/
+      WEBHOOK_URL: https://${N8N_HOST}/
+      GENERIC_TIMEZONE: Europe/Sofia
+      TZ: Europe/Sofia
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5678/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    networks:
+      - internal
+      - proxy
+    # No ports: the app calls it as http://n8n:5678, the proxy forwards the editor.
+
+  proxy:
+    image: jc21/nginx-proxy-manager:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      TZ: Europe/Sofia
+    ports:
+      - "80:80" # public HTTP (redirects + Let's Encrypt)
+      - "443:443" # public HTTPS
+      - "127.0.0.1:81:81" # admin panel, this machine only (use an SSH tunnel)
+    volumes:
+      - proxy_data:/data
+      - proxy_letsencrypt:/etc/letsencrypt
+    healthcheck:
+      test: ["CMD", "/usr/bin/check-health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    networks:
+      - proxy
+    # Not on the internal network: the proxy can reach the app and n8n, never Postgres.
+
+networks:
+  internal:
+    name: workshop_internal
+  proxy:
+    name: workshop_proxy
+
+volumes:
+  postgres_data:
+    name: workshop_postgres_data
+  n8n_data:
+    name: workshop_n8n_data
+  proxy_data:
+    name: workshop_proxy_data
+  proxy_letsencrypt:
+    name: workshop_proxy_letsencrypt

@@ -1,0 +1,44 @@
+{
+  "name": "workshop-4x4",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:init": "tsx --env-file=.env scripts/db-init.ts",
+    "build:db-init": "esbuild scripts/db-init.ts --bundle --platform=node --format=cjs --outfile=dist/db-init.cjs",
+    "test": "vitest run --exclude \"**/*.db.test.ts\"",
+    "test:db": "vitest run db.test",
+    "test:all": "vitest run",
+    "admin:hash": "tsx scripts/hash-password.ts"
+  },
+  "dependencies": {
+    "date-fns": "^4.4.0",
+    "drizzle-orm": "^0.45.4",
+    "next": "16.4.6",
+    "next-auth": "^5.0.0-beta.32",
+    "postgres": "^4.1.0",
+    "react": "19.3.0",
+    "react-big-calendar": "^1.20.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19",
+    "@types/react-big-calendar": "^1.16.3",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.11",
+    "esbuild": "^0.28.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.1.0"
+  }
+}
