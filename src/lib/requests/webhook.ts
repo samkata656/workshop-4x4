@@ -21,8 +21,22 @@ const URL_BY_TYPE = {
   modification: "N8N_MODIFICATION_WEBHOOK_URL",
 } as const;
 
-export async function notifyAiOfNewRequest(payload: RequestForAi): Promise<"sent" | "skipped" | "failed"> {
-  const url = process.env[URL_BY_TYPE[payload.type]];
+export function notifyAiOfNewRequest(payload: RequestForAi): Promise<"sent" | "skipped" | "failed"> {
+  return post(process.env[URL_BY_TYPE[payload.type]], payload);
+}
+
+/**
+ * Modification requests only: asks n8n to look up part prices and write the
+ * offer e-mail draft (N8N_OFFER_DRAFT_WEBHOOK_URL, e.g.
+ * http://n8n:5678/webhook/offer-draft). n8n answers later by calling
+ * POST /api/agent/requests/{id}/offer-draft.
+ */
+export function requestOfferDraft(payload: RequestForAi): Promise<"sent" | "skipped" | "failed"> {
+  if (payload.type !== "modification") return Promise.resolve("skipped");
+  return post(process.env.N8N_OFFER_DRAFT_WEBHOOK_URL, payload);
+}
+
+async function post(url: string | undefined, payload: RequestForAi): Promise<"sent" | "skipped" | "failed"> {
   if (!url) return "skipped";
 
   try {

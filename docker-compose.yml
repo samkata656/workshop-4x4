@@ -45,6 +45,12 @@ services:
       # Empty until the n8n workflows exist; the app then skips the AI step.
       N8N_REPAIR_WEBHOOK_URL: ${N8N_REPAIR_WEBHOOK_URL:-}
       N8N_MODIFICATION_WEBHOOK_URL: ${N8N_MODIFICATION_WEBHOOK_URL:-}
+      # Empty = the chat window says it is switched off / swaps are saved without capacities.
+      N8N_CHAT_WEBHOOK_URL: ${N8N_CHAT_WEBHOOK_URL:-}
+      N8N_NONSTOCK_WEBHOOK_URL: ${N8N_NONSTOCK_WEBHOOK_URL:-}
+      # Offer e-mail for modification requests: AI draft, then sending after the owner approves.
+      N8N_OFFER_DRAFT_WEBHOOK_URL: ${N8N_OFFER_DRAFT_WEBHOOK_URL:-}
+      N8N_OFFER_EMAIL_WEBHOOK_URL: ${N8N_OFFER_EMAIL_WEBHOOK_URL:-}
       N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
       # Empty = the agent API (/api/agent/*) answers 503 to everyone.
       AGENT_API_KEY: ${AGENT_API_KEY:-}

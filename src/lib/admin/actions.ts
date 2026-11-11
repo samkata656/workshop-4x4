@@ -11,6 +11,7 @@ import type { FormState } from "@/components/admin/action-form";
 import { getDb, schema } from "@/db";
 import { BookingError, moveBooking, setBookingStatus } from "@/lib/booking/engine";
 import { isValidDate, isValidTime } from "@/lib/booking/time";
+import { parseOfferText, saveOfferText, sendOffer } from "@/lib/requests/offer";
 import { requireAdmin } from "./session";
 
 const { bookings, consumables, fluidPrices, openingHours, quotes, requests, services, settings, vehicles } = schema;
@@ -112,6 +113,35 @@ export async function updateRequestAction(_p: FormState, form: FormData): Promis
     .where(eq(requests.id, requestId));
   refresh();
   return ok();
+}
+
+/** Offer e-mail on a modification request: "save" keeps the owner's edits, "send" also e-mails the customer. */
+export async function offerAction(_p: FormState, form: FormData): Promise<FormState> {
+  await requireAdmin();
+  const requestId = id(form);
+  if (!requestId) return fail(UNEXPECTED);
+  const parsed = parseOfferText(form.get("subject"), form.get("body"));
+  if (!parsed.ok) return fail("Попълнете тема и текст на имейла. Темата е до 200 знака, текстът — до 6000.");
+
+  await saveOfferText(requestId, parsed.subject, parsed.body);
+  if (form.get("intent") !== "send") {
+    refresh();
+    return ok("Черновата е записана. Още не е изпратена.");
+  }
+
+  const sent = await sendOffer(requestId);
+  refresh();
+  if (sent.ok) return ok(`Офертата е изпратена на ${sent.to}.`);
+  switch (sent.reason) {
+    case "NO_EMAIL":
+      return fail("Клиентът няма записан имейл. Черновата е записана, но не е изпратена.");
+    case "NOT_CONFIGURED":
+      return fail("Изпращането на имейли не е настроено (N8N_OFFER_EMAIL_WEBHOOK_URL). Черновата е записана, но не е изпратена.");
+    case "SEND_FAILED":
+      return fail("Имейлът НЕ е изпратен — n8n не потвърди изпращането. Черновата е записана; опитайте отново.");
+    default:
+      return fail(UNEXPECTED);
+  }
 }
 
 export async function updateQuoteAction(_p: FormState, form: FormData): Promise<FormState> {

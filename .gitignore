@@ -43,3 +43,6 @@ next-env.d.ts
 
 # bundled db-init script
 /dist
+
+# Local previews (e.g. the rendered offer e-mail)
+/preview/

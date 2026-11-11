@@ -396,6 +396,17 @@ export const requests = pgTable(
     /** Structured JSON written back by n8n (3 causes, or summary/jobs/missing_info). */
     aiOutput: jsonb("ai_output"),
     aiCompletedAt: timestamp("ai_completed_at", { withTimezone: true }),
+    /**
+     * Offer e-mail (modification requests): n8n writes a draft, the owner edits
+     * and approves it in the admin inbox, then it is e-mailed to the customer.
+     */
+    offerSubject: text("offer_subject"),
+    offerBody: text("offer_body"),
+    /** Prices the AI found online: [{ name, priceFromEur, priceToEur, source }]. Reference for the owner. */
+    offerItems: jsonb("offer_items"),
+    offerDraftedAt: timestamp("offer_drafted_at", { withTimezone: true }),
+    offerSentAt: timestamp("offer_sent_at", { withTimezone: true }),
+    offerSentTo: text("offer_sent_to"),
     /** Owner's private notes. */
     notes: text("notes"),
     /** Set when the owner turns the request into a booking. */
