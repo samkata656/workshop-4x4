@@ -1,0 +1,145 @@
+{
+  "name": "Workshop — Send offer e-mail",
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Sofia",
+    "errorWorkflow": "nTxRO748oE17sCzW"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "offer-email",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "cd5624a0-79e6-4aa3-b49c-393c80d8e0d8",
+      "name": "Approved offer",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "cb28d0ae-3b70-4904-8a38-d1cde414b5c0",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Workshop webhook secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Code node \"Build branded e-mail\" in \"Workshop — Send offer e-mail\".\n// Turns the owner's approved plain text into an HTML e-mail in the site's look:\n// carbon background, rust accent, condensed uppercase headings, mono labels.\n// The text is escaped first, so nothing typed in the offer can become markup.\n\nconst SITE_URL = 'https://workshop.samkobuilds.com';\nconst C = {\n  carbon: '#171c19',\n  raised: '#1d2420',\n  olive: '#343d32',\n  rust: '#c36a3c',\n  rustBright: '#d98250',\n  sand: '#d9d1c3',\n  paper: '#f2f0e9',\n  muted: '#9a968c',\n  line: '#343a36',\n};\nconst DISPLAY = \"'Sofia Sans Extra Condensed','Arial Narrow','Helvetica Neue',Arial,sans-serif\";\nconst SANS = \"Manrope,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\";\nconst MONO = \"'JetBrains Mono','SFMono-Regular',Consolas,'Courier New',monospace\";\n\nconst { to, subject, body, requestId } = $input.first().json.body;\n\nconst escapeHtml = (text) =>\n  String(text ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;');\n\n// Blank line = new paragraph; single line break stays a line break.\nconst paragraphs = String(body ?? '')\n  .replace(/\\r\\n/g, '\\n')\n  .trim()\n  .split(/\\n{2,}/)\n  .map(\n    (block) =>\n      `<p style=\"margin:0 0 18px 0;font-family:${SANS};font-size:16px;line-height:1.65;color:${C.paper};\">${escapeHtml(block).replace(/\\n/g, '<br>')}</p>`,\n  )\n  .join('\\n');\n\nconst label = (text, color = C.muted) =>\n  `<span style=\"font-family:${MONO};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:${color};\">${text}</span>`;\n\nconst html = `<!doctype html>\n<html lang=\"bg\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<meta name=\"color-scheme\" content=\"dark\">\n<meta name=\"supported-color-schemes\" content=\"dark\">\n<title>${escapeHtml(subject)}</title>\n</head>\n<body style=\"margin:0;padding:0;background-color:${C.carbon};\">\n<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;color:${C.carbon};\">Ориентировъчна оферта от 4×4 Сервиз за вашето запитване.</div>\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"${C.carbon}\" style=\"background-color:${C.carbon};\">\n<tr><td align=\"center\" style=\"padding:32px 12px;\">\n\n  <table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:100%;max-width:600px;\">\n\n    <!-- Header: the site's wordmark -->\n    <tr><td style=\"padding:0 4px 18px 4px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr>\n        <td align=\"left\" valign=\"bottom\">\n          <a href=\"${SITE_URL}\" style=\"text-decoration:none;font-family:${DISPLAY};font-size:38px;line-height:1;font-weight:700;letter-spacing:0.03em;color:${C.paper};\">4<span style=\"color:${C.rust};\">&times;</span>4</a>\n        </td>\n        <td align=\"right\" valign=\"bottom\">${label('Toyota &middot; Lexus GX/LX')}</td>\n      </tr></table>\n    </td></tr>\n\n    <!-- Card -->\n    <tr><td bgcolor=\"${C.raised}\" style=\"background-color:${C.raised};border:1px solid ${C.line};\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n        <tr><td height=\"6\" bgcolor=\"${C.rust}\" style=\"height:6px;line-height:6px;font-size:0;background-color:${C.rust};background-image:repeating-linear-gradient(-45deg,${C.rust} 0,${C.rust} 6px,${C.raised} 6px,${C.raised} 12px);\">&nbsp;</td></tr>\n        <tr><td style=\"padding:30px 28px 8px 28px;\">\n          ${label('N&deg; ' + escapeHtml(String(requestId ?? '')).padStart(2, '0'), C.rustBright)} ${label('/ Оферта за модификации')}\n          <h1 style=\"margin:14px 0 24px 0;font-family:${DISPLAY};font-size:44px;line-height:0.98;font-weight:700;text-transform:uppercase;letter-spacing:0.01em;color:${C.paper};\">${escapeHtml(subject)}</h1>\n        </td></tr>\n        <tr><td style=\"padding:0 28px 10px 28px;border-top:1px solid ${C.line};\">\n          <div style=\"height:24px;line-height:24px;font-size:0;\">&nbsp;</div>\n          ${paragraphs}\n        </td></tr>\n        <tr><td style=\"padding:6px 28px 30px 28px;\">\n          <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr>\n            <td bgcolor=\"${C.rust}\" style=\"background-color:${C.rust};\">\n              <a href=\"${SITE_URL}\" style=\"display:inline-block;padding:14px 22px;font-family:${MONO};font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;color:${C.carbon};\">Към сайта &rarr;</a>\n            </td>\n          </tr></table>\n        </td></tr>\n        <tr><td bgcolor=\"${C.olive}\" style=\"background-color:${C.olive};padding:14px 28px;\">\n          <span style=\"font-family:${SANS};font-size:13px;line-height:1.5;color:${C.sand};\">Цените са ориентировъчни. Точната оферта и цената на труда потвърждаваме след оглед в сервиза.</span>\n        </td></tr>\n      </table>\n    </td></tr>\n\n    <!-- Footer -->\n    <tr><td style=\"padding:20px 4px 0 4px;\">\n      ${label('4&times;4 Сервиз &middot; рамкови Toyota и Lexus GX/LX')}\n      <p style=\"margin:10px 0 0 0;font-family:${SANS};font-size:12px;line-height:1.6;color:${C.muted};\">Получавате този имейл, защото изпратихте запитване за модификация през <a href=\"${SITE_URL}\" style=\"color:${C.sand};\">workshop.samkobuilds.com</a>. Можете да отговорите директно на него.</p>\n    </td></tr>\n\n  </table>\n\n</td></tr>\n</table>\n</body>\n</html>`;\n\nreturn [{ json: { to, subject, html, requestId } }];\n"
+      },
+      "id": "1d21b0f0-105b-4458-9c75-f35647eaa3b4",
+      "name": "Build branded e-mail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "4×4 Сервиз"
+        }
+      },
+      "id": "42dcd593-36b8-40e0-a770-4fd03af4f190",
+      "name": "Send with Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        520,
+        0
+      ],
+      "webhookId": "d0176fd7-762a-4636-ab3c-97695f2a57ca",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bZJHdujvbVNdfKX3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { sent: true, requestId: $('Approved offer').item.json.body.requestId } }}",
+        "options": {}
+      },
+      "id": "de90053a-6da2-4401-82ec-12087c7783e2",
+      "name": "Confirm sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Send offer e-mail\nCalled by the app only when the owner presses **Одобри и изпрати на клиента** in the admin inbox:\n`{ requestId, to, subject, body }` -> `{ sent: true }`.\n\n**Build branded e-mail** escapes the owner's text and wraps it in the site's design (carbon background, rust accent). To change colours, the site address or the footer text, edit the constants at the top of that node.\n\nThis webhook sends real e-mails, so it only accepts calls that carry the `x-webhook-secret` header (value of `N8N_WEBHOOK_SECRET` in .env).\n\nIf Gmail fails, the app gets an error and tells the owner the e-mail was NOT sent.",
+        "width": 520,
+        "height": 380
+      },
+      "id": "6be131ab-9432-4c95-a226-1937565ede21",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -440
+      ]
+    }
+  ],
+  "connections": {
+    "Approved offer": {
+      "main": [
+        [
+          {
+            "node": "Build branded e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build branded e-mail": {
+      "main": [
+        [
+          {
+            "node": "Send with Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send with Gmail": {
+      "main": [
+        [
+          {
+            "node": "Confirm sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
