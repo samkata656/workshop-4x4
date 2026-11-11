@@ -122,3 +122,18 @@ describe("AI capacity answer", () => {
     expect(parsed.source).toBe("AI lookup (confidence: low)");
   });
 });
+
+describe("rate limiter under a flood of addresses", () => {
+  it("keeps a shared daily budget when the map fills up", async () => {
+    const { hit } = await import("@/lib/agent/rate-limit");
+    const everyone = { limit: 3, windowMs: 86_400_000, shared: true };
+    const visitor = { limit: 5, windowMs: 86_400_000 };
+
+    expect(hit("budget:everyone", everyone).allowed).toBe(true);
+    expect(hit("budget:everyone", everyone).allowed).toBe(true);
+    for (let i = 0; i < 6000; i++) hit(`visitor:${i}`, visitor);
+    expect(hit("budget:everyone", everyone).allowed).toBe(true);
+    // The fourth call is over the limit: the flood did not reset the count.
+    expect(hit("budget:everyone", everyone).allowed).toBe(false);
+  });
+});

@@ -17,7 +17,7 @@ const DAY = 24 * 60 * MINUTE;
 /** Each message costs LLM tokens, so the limits are deliberately tight. */
 const PER_VISITOR_BURST = { limit: 15, windowMs: 5 * MINUTE };
 const PER_VISITOR_DAY = { limit: 80, windowMs: DAY };
-const EVERYONE_DAY = { limit: 2000, windowMs: DAY };
+const EVERYONE_DAY = { limit: 2000, windowMs: DAY, shared: true };
 
 export type ChatInput = { sessionId: string; message: string };
 

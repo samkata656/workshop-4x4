@@ -8,7 +8,7 @@
  *
  * Nothing is ever sent to a customer without step 3.
  */
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { N8nError, callN8n } from "@/lib/n8n";
 import { RequestError } from "./engine";
@@ -21,6 +21,8 @@ const MAX_ITEMS = 20;
 const MAX_ITEM_NAME = 200;
 const MAX_PRICE_EUR = 100_000;
 const SEND_TIMEOUT_MS = 30_000;
+/** A second "send" inside this window is treated as a double click, not a deliberate re-send. */
+const RESEND_GUARD_MS = 60_000;
 
 /** One price the AI found online. Shown to the owner only, next to the draft. */
 export type OfferItem = { name: string; priceFromEur: number | null; priceToEur: number | null; source: string | null };
@@ -61,19 +63,20 @@ export function parseOfferDraft(input: unknown): { ok: true; draft: OfferDraft }
   return { ok: true, draft: { subject: text.subject, body: text.body, items } };
 }
 
-export type SaveDraftResult = { ok: true } | { ok: false; reason: "NOT_A_MODIFICATION" | "ALREADY_SENT" };
+export type SaveDraftResult = { ok: true } | { ok: false; reason: "NOT_A_MODIFICATION" | "ALREADY_SENT" | "EDITED_BY_OWNER" };
 
-/** Agent API: stores the AI draft. A draft the owner already sent is never overwritten. */
+/** Agent API: stores the AI draft. Text the owner already edited or sent is never overwritten. */
 export async function saveOfferDraft(requestId: number, draft: OfferDraft): Promise<SaveDraftResult> {
   return getDb().transaction(async (tx) => {
     const [request] = await tx
-      .select({ type: requests.type, sentAt: requests.offerSentAt })
+      .select({ type: requests.type, sentAt: requests.offerSentAt, editedAt: requests.offerEditedAt })
       .from(requests)
       .where(eq(requests.id, requestId))
       .limit(1);
     if (!request) throw new RequestError("REQUEST_NOT_FOUND");
     if (request.type !== "modification") return { ok: false, reason: "NOT_A_MODIFICATION" };
     if (request.sentAt) return { ok: false, reason: "ALREADY_SENT" };
+    if (request.editedAt) return { ok: false, reason: "EDITED_BY_OWNER" };
 
     const now = new Date();
     await tx
@@ -86,16 +89,24 @@ export async function saveOfferDraft(requestId: number, draft: OfferDraft): Prom
 
 /** Admin: saves the owner's edits. */
 export async function saveOfferText(requestId: number, subject: string, body: string) {
-  await getDb().update(requests).set({ offerSubject: subject, offerBody: body, updatedAt: new Date() }).where(eq(requests.id, requestId));
+  const now = new Date();
+  await getDb().update(requests).set({ offerSubject: subject, offerBody: body, offerEditedAt: now, updatedAt: now }).where(eq(requests.id, requestId));
 }
 
-export type SendOfferResult = { ok: true; to: string } | { ok: false; reason: "NOT_FOUND" | "NO_EMAIL" | "NOT_CONFIGURED" | "SEND_FAILED" };
+export type SendOfferResult = { ok: true; to: string } | { ok: false; reason: "NOT_FOUND" | "NO_EMAIL" | "JUST_SENT" | "NOT_CONFIGURED" | "SEND_FAILED" };
 
 /** Admin: e-mails the saved offer to the customer through n8n and marks the request as quoted. */
 export async function sendOffer(requestId: number): Promise<SendOfferResult> {
   const db = getDb();
   const [row] = await db
-    .select({ subject: requests.offerSubject, body: requests.offerBody, status: requests.status, to: customers.email, name: customers.name })
+    .select({
+      subject: requests.offerSubject,
+      body: requests.offerBody,
+      status: requests.status,
+      sentAt: requests.offerSentAt,
+      sentTo: requests.offerSentTo,
+      to: customers.email,
+    })
     .from(requests)
     .innerJoin(customers, eq(customers.id, requests.customerId))
     .where(eq(requests.id, requestId))
@@ -103,25 +114,35 @@ export async function sendOffer(requestId: number): Promise<SendOfferResult> {
   if (!row || !row.subject || !row.body) return { ok: false, reason: "NOT_FOUND" };
   if (!row.to) return { ok: false, reason: "NO_EMAIL" };
 
+  // Mark it as sent BEFORE sending, in one statement, so two clicks cannot both
+  // get through and a crash after the e-mail left cannot leave it looking unsent.
+  const now = new Date();
+  const [claimed] = await db
+    .update(requests)
+    .set({ offerSentAt: now, offerSentTo: row.to, updatedAt: now })
+    .where(
+      and(
+        eq(requests.id, requestId),
+        or(isNull(requests.offerSentAt), lt(requests.offerSentAt, new Date(now.getTime() - RESEND_GUARD_MS))),
+      ),
+    )
+    .returning({ id: requests.id });
+  if (!claimed) return { ok: false, reason: "JUST_SENT" };
+  const unclaim = () => db.update(requests).set({ offerSentAt: row.sentAt, offerSentTo: row.sentTo }).where(eq(requests.id, requestId));
+
   try {
     const answer = await callN8n("N8N_OFFER_EMAIL_WEBHOOK_URL", { requestId, to: row.to, subject: row.subject, body: row.body }, SEND_TIMEOUT_MS);
     if (!isRecord(answer) || answer.sent !== true) throw new N8nError("FAILED", "n8n did not confirm the e-mail was sent");
   } catch (error) {
+    await unclaim();
     if (error instanceof N8nError && error.code === "NOT_CONFIGURED") return { ok: false, reason: "NOT_CONFIGURED" };
     console.error(`[offer] e-mail for request ${requestId} was not sent:`, error);
     return { ok: false, reason: "SEND_FAILED" };
   }
 
-  const now = new Date();
-  await db
-    .update(requests)
-    .set({
-      offerSentAt: now,
-      offerSentTo: row.to,
-      // Moves a fresh request forward; a later status the owner chose is left alone.
-      ...((row.status === "new" || row.status === "contacted") && { status: "quoted" as const }),
-      updatedAt: now,
-    })
-    .where(eq(requests.id, requestId));
+  // Moves a fresh request forward; a later status the owner chose is left alone.
+  if (row.status === "new" || row.status === "contacted") {
+    await db.update(requests).set({ status: "quoted" }).where(eq(requests.id, requestId));
+  }
   return { ok: true, to: row.to };
 }

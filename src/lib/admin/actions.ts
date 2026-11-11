@@ -133,6 +133,8 @@ export async function offerAction(_p: FormState, form: FormData): Promise<FormSt
   refresh();
   if (sent.ok) return ok(`Офертата е изпратена на ${sent.to}.`);
   switch (sent.reason) {
+    case "JUST_SENT":
+      return fail("Офертата беше изпратена преди по-малко от минута. Изчакайте, ако искате да я изпратите отново.");
     case "NO_EMAIL":
       return fail("Клиентът няма записан имейл. Черновата е записана, но не е изпратена.");
     case "NOT_CONFIGURED":

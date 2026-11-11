@@ -1,7 +1,32 @@
 import { askChatAgent, parseChatInput } from "@/lib/chat";
 import { clientAddress } from "@/lib/n8n";
 
-const MAX_BODY_CHARS = 4000;
+/** A chat message is at most 1000 characters; anything larger is not read into memory. */
+const MAX_BODY_BYTES = 8 * 1024;
+
+async function readSmallJson(request: Request): Promise<unknown> {
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) return null;
+  const reader = request.body?.getReader();
+  if (!reader) return null;
+
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel(); // no content-length, or a false one: stop as soon as the cap is passed
+      return null;
+    }
+    chunks.push(value);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    return null;
+  }
+}
 
 /**
  * POST /api/chat   { "sessionId": "<uuid from the browser>", "message": "..." }
@@ -12,15 +37,7 @@ const MAX_BODY_CHARS = 4000;
  * key stay on the server.
  */
 export async function POST(request: Request) {
-  let body: unknown = null;
-  try {
-    const text = await request.text();
-    if (text.length <= MAX_BODY_CHARS) body = JSON.parse(text);
-  } catch {
-    // falls through to the 400 below
-  }
-
-  const input = parseChatInput(body);
+  const input = parseChatInput(await readSmallJson(request));
   if (!input) {
     return Response.json({ error: "Съобщението е празно или твърде дълго." }, { status: 400 });
   }

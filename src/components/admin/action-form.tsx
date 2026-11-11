@@ -26,6 +26,20 @@ export function ActionForm(props: { action: FormAction; className?: string; chil
   );
 }
 
+/**
+ * One of several submit buttons in a form: sends `intent=<value>` and is
+ * disabled while any of them is being processed, so a double click sends once.
+ */
+export function IntentButton(props: { intent: string; children: React.ReactNode; pendingLabel: string; className: string; disabled?: boolean }) {
+  const { pending, data } = useFormStatus();
+  const mine = pending && data?.get("intent") === props.intent;
+  return (
+    <button type="submit" name="intent" value={props.intent} disabled={pending || props.disabled} className={props.className}>
+      {mine ? props.pendingLabel : props.children}
+    </button>
+  );
+}
+
 export function SubmitButton(props: { children: React.ReactNode; pendingLabel?: string; className?: string }) {
   const { pending } = useFormStatus();
   return (

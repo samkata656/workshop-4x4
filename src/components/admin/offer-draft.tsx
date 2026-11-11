@@ -1,4 +1,4 @@
-import { ActionForm } from "@/components/admin/action-form";
+import { ActionForm, IntentButton } from "@/components/admin/action-form";
 import { shortDate } from "@/components/admin/ui";
 import { offerAction } from "@/lib/admin/actions";
 import { zonedTime } from "@/lib/booking/time";
@@ -95,6 +95,7 @@ export function OfferDraft(props: Props) {
             name="subject"
             className="input"
             maxLength={MAX_OFFER_SUBJECT}
+            required
             defaultValue={props.subject ?? ""}
           />
         </div>
@@ -107,6 +108,7 @@ export function OfferDraft(props: Props) {
             name="body"
             rows={14}
             maxLength={MAX_OFFER_BODY}
+            required
             defaultValue={props.body ?? ""}
             className="input h-auto py-3 font-mono text-sm leading-relaxed"
           />
@@ -118,12 +120,12 @@ export function OfferDraft(props: Props) {
           {props.sentAt && props.sentTo && ` Последно изпратена на ${props.sentTo}.`}
         </p>
         <div className="flex flex-wrap gap-3">
-          <button type="submit" name="intent" value="save" className="btn btn-ghost min-h-10 px-4">
+          <IntentButton intent="save" pendingLabel="Записваме…" className="btn btn-ghost min-h-10 px-4">
             Запиши черновата
-          </button>
-          <button type="submit" name="intent" value="send" className="btn min-h-10 px-4" disabled={!props.customerEmail}>
+          </IntentButton>
+          <IntentButton intent="send" pendingLabel="Изпращаме…" className="btn min-h-10 px-4" disabled={!props.customerEmail}>
             {props.sentAt ? "Изпрати отново" : "Одобри и изпрати на клиента"}
-          </button>
+          </IntentButton>
         </div>
       </ActionForm>
     </div>

@@ -20,7 +20,11 @@ const GREETING: Message = {
 
 /** One id per browser, so the agent remembers the conversation between pages. */
 function sessionId(): string {
-  const fresh = () => crypto.randomUUID();
+  // randomUUID needs HTTPS (or localhost). The id only keys the conversation memory, so a plain random one will do.
+  const fresh = () =>
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
   try {
     const saved = window.localStorage.getItem(SESSION_KEY);
     if (saved) return saved;

@@ -405,6 +405,8 @@ export const requests = pgTable(
     /** Prices the AI found online: [{ name, priceFromEur, priceToEur, source }]. Reference for the owner. */
     offerItems: jsonb("offer_items"),
     offerDraftedAt: timestamp("offer_drafted_at", { withTimezone: true }),
+    /** Set when the owner saves the text. From then on an AI draft never replaces it. */
+    offerEditedAt: timestamp("offer_edited_at", { withTimezone: true }),
     offerSentAt: timestamp("offer_sent_at", { withTimezone: true }),
     offerSentTo: text("offer_sent_to"),
     /** Owner's private notes. */

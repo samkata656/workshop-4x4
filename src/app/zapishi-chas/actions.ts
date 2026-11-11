@@ -131,7 +131,7 @@ export type LookupResult =
 const HOUR = 60 * 60_000;
 /** Every lookup is a paid web search and adds a row, so the limits are tight. */
 const LOOKUPS_PER_VISITOR = { limit: 5, windowMs: HOUR };
-const LOOKUPS_EVERYONE = { limit: 60, windowMs: 24 * HOUR };
+const LOOKUPS_EVERYONE = { limit: 60, windowMs: 24 * HOUR, shared: true };
 
 export async function lookupNonStockAction(input: unknown): Promise<LookupResult> {
   const parsed = parseNonStockInput(input);

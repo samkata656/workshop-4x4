@@ -9,7 +9,8 @@ import { parseOfferDraft, saveOfferDraft } from "@/lib/requests/offer";
  *
  * Stores the AI-written offer e-mail for a modification request. It is only a
  * draft: the owner edits and approves it in the admin inbox before anything is
- * sent. Sending it again replaces the draft, unless the offer was already sent.
+ * sent. Sending it again replaces the draft, unless the owner already edited or
+ * sent it: then the answer is 200 { saved: false, reason } and nothing changes.
  */
 export const POST = agentRoute<{ params: Promise<{ id: string }> }>(async (request, { params }) => {
   const id = parseIdText((await params).id);
@@ -21,9 +22,11 @@ export const POST = agentRoute<{ params: Promise<{ id: string }> }>(async (reque
 
   const saved = await saveOfferDraft(id, parsed.draft);
   if (!saved.ok) {
-    throw saved.reason === "ALREADY_SENT"
-      ? new AgentError(409, "OFFER_ALREADY_SENT", "The owner already sent this offer to the customer; the draft was not replaced.")
-      : new AgentError(409, "NOT_A_MODIFICATION", "Offer drafts exist only for modification requests.");
+    if (saved.reason === "NOT_A_MODIFICATION") {
+      throw new AgentError(409, "NOT_A_MODIFICATION", "Offer drafts exist only for modification requests.");
+    }
+    // The owner's text wins. This is a normal outcome (a retry, a re-run), so it is not an error.
+    return json({ requestId: id, saved: false, reason: saved.reason });
   }
   return json({ requestId: id, saved: true, items: parsed.draft.items.length });
 });

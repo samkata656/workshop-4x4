@@ -15,7 +15,7 @@ import { callN8n } from "@/lib/n8n";
 
 const { vehicles } = schema;
 
-const LOOKUP_TIMEOUT_MS = 90_000;
+const LOOKUP_TIMEOUT_MS = 75_000; // the proxy gives up at 90 s; answer before it does
 const MAX_TEXT = 80;
 const MAX_LITRES = 60; // nothing on a 4x4 holds more; larger numbers are a wrong unit or a mistake
 const MAX_SOURCE = 1000;
@@ -143,7 +143,8 @@ export async function findOrCreateNonStockVehicle(input: NonStockInput, lookup: 
   if (existing) {
     const [retried] = await db
       .update(vehicles)
-      .set({ ...found, fuel: input.fuel, transmissionType: input.transmissionType, updatedAt: new Date() })
+      // Only the capacities: fuel and gearbox type stay as first saved, because a booking may already use this row.
+      .set({ ...found, updatedAt: new Date() })
       .where(eq(vehicles.id, existing.id))
       .returning();
     return retried ?? existing;
