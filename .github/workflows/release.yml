@@ -1,0 +1,87 @@
+# Release: every merge into main builds the app image and stores it in GHCR
+# (GitHub Container Registry) under three tags:
+#
+#   ghcr.io/<owner>/workshop-4x4:1.0.<run number>   the version you release in Portainer
+#   ghcr.io/<owner>/workshop-4x4:sha-<commit>       exactly which code it is
+#   ghcr.io/<owner>/workshop-4x4:latest             the newest build
+#
+# There is NO deploy step. Nothing reaches the server until you change
+# APP_VERSION in Portainer and update the stack yourself.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Two merges in a row: finish the first release before starting the second.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  image:
+    name: Build and push the image
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Only this job may write, and only to packages (the image registry).
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Work out the image name and tags
+        id: meta
+        env:
+          REPOSITORY: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          image="ghcr.io/${REPOSITORY,,}"          # registry names must be lower case
+          version="1.0.${RUN_NUMBER}"
+          {
+            echo "version=${version}"
+            echo "tags=${image}:${version},${image}:sha-${COMMIT::7},${image}:latest"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Log in to GHCR with this run's own token
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Show the version to release
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: echo "Released **${VERSION}** — set APP_VERSION=${VERSION} in Portainer to deploy it." >> "$GITHUB_STEP_SUMMARY"

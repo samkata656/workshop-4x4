@@ -1,0 +1,71 @@
+# CI: runs on every pull request, and is reused by the release workflow.
+# It must be green before a pull request can be merged into main.
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+# The token GitHub gives this workflow can only read the code.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types, tests, image build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    # A throw-away Postgres for the *.db.test.ts files. It exists only for this
+    # run, so the password below is not a secret.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: workshop
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: workshop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U workshop -d workshop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://workshop:ci-only-password@localhost:5432/workshop
+
+    steps:
+      # Every action is pinned to a full commit SHA, so a re-tagged release
+      # cannot change what runs here. The comment names the version.
+      - name: Check out the code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies (exactly as in package-lock.json)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Tests (unit + database)
+        run: npm run test:all
+
+      # Proves the Dockerfile still builds; nothing is pushed anywhere.
+      - name: Build the Docker image (no push)
+        run: docker build --tag workshop-4x4:ci .
