@@ -1,29 +1,28 @@
 {
   "name": "Workshop — Offer draft (modification)",
-  "active": false,
-  "pinData": {},
-  "settings": {
-    "executionOrder": "v1",
-    "timezone": "Europe/Sofia",
-    "errorWorkflow": "nTxRO748oE17sCzW"
-  },
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "offer-draft",
-        "responseMode": "onReceived",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
-      "id": "39a91a8b-e05c-49df-afec-314c8b1895ca",
+      "id": "fa7d181f-6249-464c-acfb-6d93e8ce6cf4",
       "name": "Modification request",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        0,
-        0
+        -32,
+        96
       ],
-      "webhookId": "0fa4c8e7-888e-4f8e-950f-a6af03098a29"
+      "webhookId": "0fa4c8e7-888e-4f8e-950f-a6af03098a29",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "W26yiJFHDmlw6ByS",
+          "name": "Header Auth account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -36,13 +35,13 @@
           "enableStreaming": false
         }
       },
-      "id": "79624668-db33-4de6-abe3-d31cfa8569c9",
+      "id": "474c8d3b-53e7-421a-9a24-82115719c182",
       "name": "Price research and draft",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3,
       "position": [
-        280,
-        0
+        240,
+        96
       ],
       "retryOnFail": true,
       "maxTries": 2,
@@ -56,7 +55,6 @@
           "mode": "list",
           "cachedResultName": "gpt-6-luna"
         },
-        "responsesApiEnabled": true,
         "builtInTools": {
           "webSearch": {
             "searchContextSize": "medium"
@@ -64,13 +62,13 @@
         },
         "options": {}
       },
-      "id": "889a7561-b575-427a-8938-0cd828848206",
+      "id": "851f9fe9-2c61-4f2e-85f3-4277a9c3cc7d",
       "name": "OpenAI model (web search)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        240,
-        240
+        208,
+        336
       ],
       "credentials": {
         "openAiApi": {
@@ -84,13 +82,13 @@
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"subject\",\n    \"body\",\n    \"items\"\n  ],\n  \"properties\": {\n    \"subject\": {\n      \"type\": \"string\",\n      \"maxLength\": 150,\n      \"description\": \"Тема на имейла, един ред, на български.\"\n    },\n    \"body\": {\n      \"type\": \"string\",\n      \"maxLength\": 4500,\n      \"description\": \"Целият текст на имейла до клиента, на български, обикновен текст без markdown.\"\n    },\n    \"items\": {\n      \"type\": \"array\",\n      \"maxItems\": 15,\n      \"description\": \"Една позиция за всяка част или комплект, чиято цена е търсена.\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\n          \"name\",\n          \"price_from_eur\",\n          \"price_to_eur\",\n          \"source_url\"\n        ],\n        \"properties\": {\n          \"name\": {\n            \"type\": \"string\",\n            \"maxLength\": 180,\n            \"description\": \"Частта или комплектът, с марка/модел ако е известен.\"\n          },\n          \"price_from_eur\": {\n            \"type\": [\n              \"number\",\n              \"null\"\n            ],\n            \"description\": \"Долна граница на цената в евро, или null ако не е намерена.\"\n          },\n          \"price_to_eur\": {\n            \"type\": [\n              \"number\",\n              \"null\"\n            ],\n            \"description\": \"Горна граница на цената в евро, или null ако не е намерена.\"\n          },\n          \"source_url\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ],\n            \"description\": \"Връзка към страницата, от която е цената, или null.\"\n          }\n        }\n      }\n    }\n  }\n}"
       },
-      "id": "3ea3206b-2f7f-49a6-9786-8d490cb4d5b9",
+      "id": "2c0486f1-9df9-4cff-b2dd-d622b1953244",
       "name": "Offer (JSON)",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.2,
       "position": [
-        460,
-        240
+        416,
+        336
       ]
     },
     {
@@ -104,37 +102,37 @@
         "jsonBody": "={{ { draft: $json.output } }}",
         "options": {}
       },
-      "id": "d616f588-8d32-4ca0-af6c-dbf9b055c52d",
+      "id": "9f048691-772c-489d-a62b-22f9785116de",
       "name": "Save draft for approval",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        700,
-        0
+        656,
+        96
       ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
       "credentials": {
         "httpHeaderAuth": {
           "id": "1Lno0z267pBxuZ3e",
           "name": "Header Auth account"
         }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 3000
+      }
     },
     {
       "parameters": {
         "content": "## Offer draft\nThe app POSTs every new **modification** request to\n`http://n8n:5678/webhook/offer-draft`.\n\nThe agent searches the web for part prices for that exact vehicle, writes an offer e-mail in Bulgarian and saves it as a **draft** through the agent API. Nothing is sent to the customer here: the owner edits and approves the draft in the admin inbox.\n\n**Set in .env:** `N8N_OFFER_DRAFT_WEBHOOK_URL`",
-        "width": 480,
-        "height": 320
+        "height": 320,
+        "width": 480
       },
-      "id": "ba9e97d1-2730-4135-a2c3-032f8c72bcad",
+      "id": "28009f13-e379-4e27-8b30-363dbfb59d6c",
       "name": "Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -380
+        -80,
+        -288
       ]
     }
   ],
@@ -183,5 +181,15 @@
         ]
       ]
     }
-  }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "nTxRO748oE17sCzW",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "pinData": {}
 }

@@ -6,17 +6,24 @@
         "httpMethod": "POST",
         "path": "nonstock-lookup",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
-      "id": "56f2146b-46e3-4784-8c1a-16f2339deb5f",
+      "id": "7d46ad3f-9764-463b-b963-a2e075b734f9",
       "name": "Lookup request",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        0,
-        0
+        512,
+        128
       ],
-      "webhookId": "7b99e5ba-da58-43d3-860c-299a3d11d39d"
+      "webhookId": "7b99e5ba-da58-43d3-860c-299a3d11d39d",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "W26yiJFHDmlw6ByS",
+          "name": "Header Auth account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -31,13 +38,13 @@
           ]
         }
       },
-      "id": "773be170-be39-4feb-b045-ad963d8003ca",
+      "id": "bc50d09b-7ec0-437f-9455-699d1350f1a7",
       "name": "Look up capacities",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.5,
       "position": [
-        260,
-        0
+        768,
+        128
       ],
       "retryOnFail": true,
       "maxTries": 2,
@@ -45,38 +52,16 @@
     },
     {
       "parameters": {
-        "model": "anthropic/claude-haiku-4.5:online",
-        "options": {
-          "temperature": 0
-        }
-      },
-      "id": "7d6e0122-89be-49e5-a88d-cfa4b90fafe6",
-      "name": "OpenRouter model (web search)",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
-      "typeVersion": 1,
-      "position": [
-        220,
-        220
-      ],
-      "credentials": {
-        "openRouterApi": {
-          "id": "REPLACE_ME",
-          "name": "OpenRouter account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"engine_oil_with_filter_l\",\n    \"transmission_l\",\n    \"front_diff_l\",\n    \"rear_diff_l\",\n    \"transfer_case_l\",\n    \"coolant_l\",\n    \"brake_fluid_l\",\n    \"sources\",\n    \"confidence\",\n    \"notes\"\n  ],\n  \"properties\": {\n    \"engine_oil_with_filter_l\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ],\n      \"description\": \"Engine oil capacity with filter change. Litres, or null if not found.\"\n    },\n    \"transmission_l\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ],\n      \"description\": \"Transmission fluid capacity (drain and refill for automatics). Litres, or null if not found.\"\n    },\n    \"front_diff_l\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ],\n      \"description\": \"Front differential oil. Litres, or null if not found.\"\n    },\n    \"rear_diff_l\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ],\n      \"description\": \"Rear differential oil. Litres, or null if not found.\"\n    },\n    \"transfer_case_l\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ],\n      \"description\": \"Transfer case oil. Litres, or null if not found.\"\n    },\n    \"coolant_l\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ],\n      \"description\": \"Cooling system capacity. Litres, or null if not found.\"\n    },\n    \"brake_fluid_l\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ],\n      \"description\": \"Brake fluid for a full change. Litres, or null if not found.\"\n    },\n    \"sources\": {\n      \"type\": \"array\",\n      \"maxItems\": 8,\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Links to the pages the numbers were taken from.\"\n    },\n    \"confidence\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"low\",\n        \"medium\",\n        \"high\"\n      ]\n    },\n    \"notes\": {\n      \"type\": \"string\",\n      \"maxLength\": 500,\n      \"description\": \"Кратка бележка на български за собственика: какво е несигурно.\"\n    }\n  }\n}"
       },
-      "id": "f7819688-cb81-498a-9343-19ee2aa29ea9",
+      "id": "df51371b-fcbd-4905-98a4-5cf750386b06",
       "name": "Capacities (JSON)",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.2,
       "position": [
-        440,
-        220
+        944,
+        352
       ]
     },
     {
@@ -85,29 +70,59 @@
         "responseBody": "={{ { output: $json.output } }}",
         "options": {}
       },
-      "id": "db5220a2-921d-4149-8059-7556c8753d37",
+      "id": "b0d3cbe9-59f2-4686-ad7f-aa5b4b7e3d63",
       "name": "Reply",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        660,
-        0
+        1168,
+        128
       ]
     },
     {
       "parameters": {
         "content": "## Non-stock capacity lookup\nThe app POSTs\n`{ brand, model, generation, engine, transmission }` to\n`http://n8n:5678/webhook/nonstock-lookup` and waits for\n`{ \"output\": { ...litres, sources, confidence, notes } }`.\n\nThe model id ends in `:online`, which turns on OpenRouter web search. Expect 10-40 s per lookup.\n\n**App side not built yet:** the call from the form and saving the vehicle row.",
-        "width": 460,
-        "height": 320
+        "height": 320,
+        "width": 460
       },
-      "id": "77d03a19-7f5c-4041-8101-7e4c092fbd8a",
+      "id": "8b9b26cf-b480-4199-bfd7-7e905162e706",
       "name": "Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -380
+        464,
+        -256
       ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-6-luna",
+          "mode": "list",
+          "cachedResultName": "gpt-6-luna"
+        },
+        "builtInTools": {
+          "webSearch": {
+            "searchContextSize": "medium"
+          }
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        336
+      ],
+      "id": "973392d9-d135-4f6d-bc03-2c3930101e5b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "ds62VLtU4Ep3VUQg",
+          "name": "OpenAI account"
+        }
+      }
     }
   ],
   "connections": {
@@ -133,17 +148,6 @@
         ]
       ]
     },
-    "OpenRouter model (web search)": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Look up capacities",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Capacities (JSON)": {
       "ai_outputParser": [
         [
@@ -154,12 +158,27 @@
           }
         ]
       ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Look up capacities",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "timezone": "Europe/Sofia"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "nTxRO748oE17sCzW",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
   "pinData": {}
 }

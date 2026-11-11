@@ -6,17 +6,24 @@
         "httpMethod": "POST",
         "path": "chat-agent",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
-      "id": "711342ee-e383-4405-bb6d-e0537a130762",
+      "id": "731ebf43-b999-4c7d-9f0d-4e397bfa2558",
       "name": "Chat message",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -240,
-        0
+        48,
+        368
       ],
-      "webhookId": "6b7400c5-fa54-42f4-a0f7-5f2125b709a1"
+      "webhookId": "6b7400c5-fa54-42f4-a0f7-5f2125b709a1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "W26yiJFHDmlw6ByS",
+          "name": "Header Auth account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -28,13 +35,13 @@
           "enableStreaming": false
         }
       },
-      "id": "db575344-46a2-491e-a53a-2e6284281d08",
+      "id": "4ccf76fa-2944-4508-8285-3ee88c9b67e1",
       "name": "Booking agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3,
       "position": [
-        300,
-        0
+        576,
+        368
       ]
     },
     {
@@ -45,15 +52,16 @@
           "mode": "list",
           "cachedResultName": "gpt-6-luna"
         },
+        "builtInTools": {},
         "options": {}
       },
-      "id": "9cc4ceaa-3e1a-4410-bd66-f039a6577295",
+      "id": "b65288cb-3146-4cad-b238-9796720a4153",
       "name": "OpenAI model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        -160,
-        300
+        128,
+        656
       ],
       "credentials": {
         "openAiApi": {
@@ -69,28 +77,27 @@
         "tableName": "workshop_chat_histories",
         "contextWindowLength": 20
       },
-      "id": "5a38da35-1902-495d-937f-a72f7c70985f",
+      "id": "2c2e0b56-3b3d-4296-9d8b-eaefbd90c486",
       "name": "Chat memory (Postgres)",
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        20,
-        300
+        304,
+        656
       ],
       "credentials": {
         "postgres": {
-          "id": "REPLACE_ME",
-          "name": "Workshop Postgres (n8n db)"
+          "id": "8sp7SbmiW4iiZSqI",
+          "name": "Postgres account"
         }
       }
     },
     {
       "parameters": {
+        "toolDescription": "Search the workshop's vehicle catalogue. All filters are optional and match partially. Returns vehicle rows with their id. Use it to find the customer's exact vehicle.",
+        "url": "http://app:3000/api/agent/vehicles",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "toolDescription": "Search the workshop's vehicle catalogue. All filters are optional and match partially. Returns vehicle rows with their id. Use it to find the customer's exact vehicle.",
-        "method": "GET",
-        "url": "http://app:3000/api/agent/vehicles",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -114,13 +121,13 @@
         },
         "options": {}
       },
-      "id": "43eb8a3f-2291-43ed-9a32-e4f79e4c6d4e",
+      "id": "e3391194-a882-4e9b-bbeb-04b37db6181a",
       "name": "list_vehicles",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        200,
-        300
+        480,
+        656
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -131,11 +138,10 @@
     },
     {
       "parameters": {
+        "toolDescription": "List the services with duration and the full price of each one for a given vehicle. Needs the vehicle id from list_vehicles.",
+        "url": "http://app:3000/api/agent/services",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "toolDescription": "List the services with duration and the full price of each one for a given vehicle. Needs the vehicle id from list_vehicles.",
-        "method": "GET",
-        "url": "http://app:3000/api/agent/services",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -147,13 +153,13 @@
         },
         "options": {}
       },
-      "id": "79e24fa5-4ad2-48ee-9641-f7ee157c7664",
+      "id": "ffdfa8e8-f41a-4ac7-9852-f5c7fef458a2",
       "name": "list_services",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        380,
-        300
+        656,
+        656
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -164,23 +170,23 @@
     },
     {
       "parameters": {
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "toolDescription": "Free start times on one day for the whole job (all chosen services together) and the total price. An empty slots list means closed, fully booked, or outside the booking window.",
         "method": "POST",
         "url": "http://app:3000/api/agent/availability",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { vehicleId: $fromAI('vehicleId', 'Vehicle id from list_vehicles', 'number'), serviceIds: $fromAI('serviceIds', 'JSON array of service ids from list_services, e.g. [1, 4]', 'json'), date: $fromAI('date', 'Date as YYYY-MM-DD, workshop time', 'string') } }}",
         "options": {}
       },
-      "id": "856561b1-b05b-4558-8d42-381024c4e019",
+      "id": "871db1c8-b1d0-4307-8951-36b8dd559906",
       "name": "check_availability",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        560,
-        300
+        848,
+        656
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -191,23 +197,23 @@
     },
     {
       "parameters": {
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "toolDescription": "Book the job. Call ONLY after the customer confirmed vehicle, services, date, time and price with a clear yes, gave name and phone, and agreed to data processing. The time must come from check_availability.",
         "method": "POST",
         "url": "http://app:3000/api/agent/bookings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { vehicleId: $fromAI('vehicleId', 'Vehicle id from list_vehicles', 'number'), serviceIds: $fromAI('serviceIds', 'JSON array of service ids from list_services, e.g. [1, 4]', 'json'), date: $fromAI('date', 'Date as YYYY-MM-DD', 'string'), time: $fromAI('time', 'Start time HH:MM from check_availability', 'string'), contact: { name: $fromAI('name', 'Customer full name', 'string'), phone: $fromAI('phone', 'Customer phone number, e.g. 0888 123 456', 'string'), email: $fromAI('email', 'Customer email, or empty string if not given', 'string', '') || null, consent: $fromAI('consent', 'true only after the customer explicitly agreed to their data being processed', 'boolean') }, notes: $fromAI('notes', 'Optional note from the customer, or empty', 'string', '') || null } }}",
         "options": {}
       },
-      "id": "48ecc8a1-bebb-4d9d-9fc7-06171ec8c119",
+      "id": "e17bbd0a-9302-41a6-a123-1357ef706325",
       "name": "create_booking",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        740,
-        300
+        1024,
+        656
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -218,23 +224,23 @@
     },
     {
       "parameters": {
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "toolDescription": "Save a price quote for the owner without reserving a bay. Needs name, phone and consent.",
         "method": "POST",
         "url": "http://app:3000/api/agent/quotes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { vehicleId: $fromAI('vehicleId', 'Vehicle id from list_vehicles', 'number'), serviceIds: $fromAI('serviceIds', 'JSON array of service ids from list_services, e.g. [1, 4]', 'json'), contact: { name: $fromAI('name', 'Customer full name', 'string'), phone: $fromAI('phone', 'Customer phone number, e.g. 0888 123 456', 'string'), email: $fromAI('email', 'Customer email, or empty string if not given', 'string', '') || null, consent: $fromAI('consent', 'true only after the customer explicitly agreed to their data being processed', 'boolean') } } }}",
         "options": {}
       },
-      "id": "797b8357-be1c-4529-afb5-a83b9ffb7afa",
+      "id": "e5f15538-5f9e-4ce6-9e02-99bf899e65f9",
       "name": "create_quote",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        920,
-        300
+        1200,
+        656
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -249,28 +255,28 @@
         "responseBody": "={{ { reply: $json.output } }}",
         "options": {}
       },
-      "id": "0ead2ab3-b54d-408e-bc26-1675bc26c2aa",
+      "id": "ca5b70ae-a2bd-422c-afcb-cfc33587c87f",
       "name": "Reply",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        760,
-        0
+        1040,
+        368
       ]
     },
     {
       "parameters": {
         "content": "## Chat booking agent\nThe app's `/api/chat` POSTs\n`{ \"sessionId\": \"...\", \"message\": \"...\" }` to\n`http://n8n:5678/webhook/chat-agent` and gets back `{ \"reply\": \"...\" }`.\n\nMemory is kept per `sessionId` in the n8n database (table `workshop_chat_histories`).\n\n**App side not built yet:** `/api/chat` and the chat window.",
-        "width": 460,
-        "height": 300
+        "height": 300,
+        "width": 460
       },
-      "id": "58ea6796-bb2b-4e18-be04-e5b7069a5eeb",
+      "id": "7d188864-f54d-41ec-9521-3aaa150d8727",
       "name": "Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -280,
-        -360
+        0,
+        0
       ]
     }
   ],
@@ -378,7 +384,11 @@
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "timezone": "Europe/Sofia"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "nTxRO748oE17sCzW",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
   "pinData": {}
 }

@@ -1,67 +1,59 @@
 {
   "name": "Workshop — Error alert",
-  "active": false,
-  "pinData": {},
-  "settings": {
-    "executionOrder": "v1",
-    "timezone": "Europe/Sofia"
-  },
   "nodes": [
     {
       "parameters": {},
-      "id": "c91f6abf-e68c-44ad-815a-6d42ba6c0644",
+      "id": "bf19ad92-bf18-4847-a9a5-9784606700c1",
       "name": "On workflow error",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
       "position": [
-        0,
-        0
+        48,
+        336
       ]
     },
     {
       "parameters": {
-        "resource": "message",
-        "operation": "sendMessage",
         "chatId": "PUT_YOUR_CHAT_ID_HERE",
         "text": "=🔴 <b>n8n: workflow failed</b>\n\n<b>Workflow:</b> {{ ($json.workflow.name || 'unknown').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }}\n<b>Failed node:</b> {{ ($json.execution?.lastNodeExecuted || 'trigger / activation').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }}\n<b>When:</b> {{ $now.setZone('Europe/Sofia').toFormat('yyyy-MM-dd HH:mm') }}\n\n<b>Error:</b>\n<code>{{ ($json.execution?.error?.message || $json.trigger?.error?.message || 'No error message').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 1500) }}</code>\n\n{{ $json.execution?.url ? 'Run: ' + $json.execution.url : '' }}",
         "additionalFields": {
           "appendAttribution": false,
-          "parse_mode": "HTML",
-          "disable_web_page_preview": true
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
         }
       },
-      "id": "f0eaef4e-b7b2-44a0-81da-828ac585b9c9",
+      "id": "46737260-9f99-4bb4-8fa9-ec1e51a93c93",
       "name": "Send Telegram alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        280,
-        0
+        320,
+        336
       ],
       "webhookId": "bce1709a-06e0-49e7-9781-81df4f142e68",
-      "credentials": {
-        "telegramApi": {
-          "id": "REPLACE_ME",
-          "name": "Telegram account"
-        }
-      },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "telegramApi": {
+          "id": "HPuB9bZLnbmSN21e",
+          "name": "Telegram account"
+        }
+      }
     },
     {
       "parameters": {
         "content": "## Error alert\nRuns when any workflow that names this one as its **Error workflow** fails, and sends the workflow name, failed node, error text and a link to the run to Telegram.\n\n**Set up:** a Telegram credential (bot token) and your chat ID in the Telegram node.\n\nIt only fires for real (production) runs, not for manual test runs in the editor.",
-        "width": 440,
-        "height": 280
+        "height": 280,
+        "width": 440
       },
-      "id": "cbd179ab-7b90-4672-b37d-db75375e421d",
+      "id": "d25ff153-49fd-451e-b323-4e4faaaa428a",
       "name": "Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -340
+        0,
+        0
       ]
     }
   ],
@@ -77,5 +69,11 @@
         ]
       ]
     }
-  }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "pinData": {}
 }

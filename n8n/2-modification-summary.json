@@ -5,18 +5,24 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "modification-summary",
-        "responseMode": "onReceived",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
-      "id": "6bd73bdb-a951-4d7f-b7f3-eed8ed14f236",
+      "id": "dea78d1f-6849-41a4-a2bf-e80c302755b3",
       "name": "Modification request",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        0,
-        0
+        48,
+        320
       ],
-      "webhookId": "e37988f1-565f-47e9-99d8-623911e56924"
+      "webhookId": "e37988f1-565f-47e9-99d8-623911e56924",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "W26yiJFHDmlw6ByS",
+          "name": "Header Auth account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -31,17 +37,75 @@
           ]
         }
       },
-      "id": "34202711-b907-4447-8f23-039e9274244e",
+      "id": "67d64763-2d88-43cf-bd7c-8d9eef8cbf1d",
       "name": "Summarise",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.5,
       "position": [
-        260,
-        0
+        304,
+        320
       ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"summary\",\n    \"jobs\",\n    \"missing_info\"\n  ],\n  \"properties\": {\n    \"summary\": {\n      \"type\": \"string\",\n      \"maxLength\": 900,\n      \"description\": \"2-3 изречения: какво иска клиентът.\"\n    },\n    \"jobs\": {\n      \"type\": \"array\",\n      \"maxItems\": 20,\n      \"items\": {\n        \"type\": \"string\",\n        \"maxLength\": 250\n      },\n      \"description\": \"Отделните работи, които сервизът трябва да извърши.\"\n    },\n    \"missing_info\": {\n      \"type\": \"array\",\n      \"maxItems\": 15,\n      \"items\": {\n        \"type\": \"string\",\n        \"maxLength\": 250\n      },\n      \"description\": \"Въпроси към клиента за липсваща информация; може да е празен списък.\"\n    }\n  }\n}"
+      },
+      "id": "af1659ca-0863-4fa8-87e6-642496494e31",
+      "name": "Summary (JSON)",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://app:3000/api/agent/requests/{{ $('Modification request').item.json.body.requestId }}/ai-result",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { output: $json.output } }}",
+        "options": {}
+      },
+      "id": "ca59a898-fa4e-40bc-be31-3d298f89700f",
+      "name": "Save to admin inbox",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        704,
+        320
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1Lno0z267pBxuZ3e",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Modification summary\nThe app POSTs a new modification request to\n`http://n8n:5678/webhook/modification-summary`.\nn8n answers 200 at once, asks the LLM for a summary, jobs and missing info, then saves them through the agent API.\n\n**Set in .env:** `N8N_MODIFICATION_WEBHOOK_URL`",
+        "height": 260,
+        "width": 420
+      },
+      "id": "45b34d1d-842e-465c-ad9e-6fb146e78070",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -51,80 +115,23 @@
           "mode": "list",
           "cachedResultName": "gpt-6-luna"
         },
+        "responsesApiEnabled": false,
         "options": {}
       },
-      "id": "29bcbe49-aa37-4941-8777-42345ac13ce8",
-      "name": "OpenAI model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        220,
-        220
+        272,
+        528
       ],
+      "id": "0efe122f-b2d1-4be7-86da-3117b88b8706",
+      "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
           "id": "ds62VLtU4Ep3VUQg",
           "name": "OpenAI account"
         }
       }
-    },
-    {
-      "parameters": {
-        "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"summary\",\n    \"jobs\",\n    \"missing_info\"\n  ],\n  \"properties\": {\n    \"summary\": {\n      \"type\": \"string\",\n      \"maxLength\": 900,\n      \"description\": \"2-3 изречения: какво иска клиентът.\"\n    },\n    \"jobs\": {\n      \"type\": \"array\",\n      \"maxItems\": 20,\n      \"items\": {\n        \"type\": \"string\",\n        \"maxLength\": 250\n      },\n      \"description\": \"Отделните работи, които сервизът трябва да извърши.\"\n    },\n    \"missing_info\": {\n      \"type\": \"array\",\n      \"maxItems\": 15,\n      \"items\": {\n        \"type\": \"string\",\n        \"maxLength\": 250\n      },\n      \"description\": \"Въпроси към клиента за липсваща информация; може да е празен списък.\"\n    }\n  }\n}"
-      },
-      "id": "8eee2bd1-46f5-4629-9253-5043d2f93904",
-      "name": "Summary (JSON)",
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.2,
-      "position": [
-        420,
-        220
-      ]
-    },
-    {
-      "parameters": {
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "method": "POST",
-        "url": "=http://app:3000/api/agent/requests/{{ $('Modification request').item.json.body.requestId }}/ai-result",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ { output: $json.output } }}",
-        "options": {}
-      },
-      "id": "d35428e3-487a-4020-9e17-8668205c6d45",
-      "name": "Save to admin inbox",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        660,
-        0
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "1Lno0z267pBxuZ3e",
-          "name": "Header Auth account"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 3000
-    },
-    {
-      "parameters": {
-        "content": "## Modification summary\nThe app POSTs a new modification request to\n`http://n8n:5678/webhook/modification-summary`.\nn8n answers 200 at once, asks the LLM for a summary, jobs and missing info, then saves them through the agent API.\n\n**Set in .env:** `N8N_MODIFICATION_WEBHOOK_URL`",
-        "width": 420,
-        "height": 260
-      },
-      "id": "e904dda4-dc98-4dc7-9106-eb0a22544425",
-      "name": "Note",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -40,
-        -320
-      ]
     }
   ],
   "connections": {
@@ -150,17 +157,6 @@
         ]
       ]
     },
-    "OpenAI model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Summarise",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Summary (JSON)": {
       "ai_outputParser": [
         [
@@ -171,12 +167,27 @@
           }
         ]
       ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarise",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "timezone": "Europe/Sofia"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "nTxRO748oE17sCzW",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
   "pinData": {}
 }
