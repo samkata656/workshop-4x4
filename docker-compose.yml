@@ -1,6 +1,6 @@
 # Workshop stack: app + Postgres + n8n + NGINX Proxy Manager.
 #
-#   docker compose up -d --build     start everything (migrations + seed run automatically)
+#   docker compose up -d             start everything (migrations + seed run automatically)
 #   docker compose ps                see what is running and healthy
 #   docker compose logs -f app       watch the app
 #   docker compose down              stop (data stays in the named volumes)
@@ -32,7 +32,11 @@ services:
     # No ports: the database is reachable only from other containers.
 
   app:
-    build: .
+    # Built by GitHub Actions (.github/workflows/release.yml) and stored in GHCR.
+    # APP_VERSION picks the release, e.g. 1.0.7: change it and update the stack to
+    # release a new version or to roll back. The server never builds the image.
+    # (docker-compose.dev.yml builds from the local code instead.)
+    image: ghcr.io/samkata656/workshop-4x4:${APP_VERSION:?set APP_VERSION, e.g. 1.0.1}
     restart: unless-stopped
     depends_on:
       postgres:
