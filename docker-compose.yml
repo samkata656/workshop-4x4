@@ -13,7 +13,10 @@ name: workshop-4x4
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # Pinned to an exact version AND digest: a redeploy can never pull different
+    # code than what was reviewed. To upgrade, change both in a pull request
+    # (digest: docker buildx imagetools inspect <image>:<version>).
+    image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
@@ -68,7 +71,8 @@ services:
     # No ports: the proxy reaches it as http://app:3000.
 
   n8n:
-    image: docker.n8n.io/n8nio/n8n:stable
+    # Pinned like postgres above. n8n upgrades migrate its database: back up first.
+    image: docker.n8n.io/n8nio/n8n:2.47.4@sha256:56a3f0d56c2888b53ca7d89de4aa3de702888f33667c96a1f1d7118548f979e9
     restart: unless-stopped
     depends_on:
       # The app creates the n8n database before it reports healthy.
@@ -107,7 +111,8 @@ services:
     # No ports: the app calls it as http://n8n:5678, the proxy forwards the editor.
 
   proxy:
-    image: jc21/nginx-proxy-manager:2
+    # Pinned like postgres above.
+    image: jc21/nginx-proxy-manager:2.17.0@sha256:9cdfebbcbb6a70b84c538e6e39862c5d627171e5f4ea4bfda933f7643e3640a4
     restart: unless-stopped
     depends_on:
       - app

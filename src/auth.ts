@@ -6,7 +6,8 @@
  */
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { safeEqual, verifyPassword } from "@/lib/admin/password";
+import { checkAdminLogin } from "@/lib/admin/login";
+import { clientAddress } from "@/lib/n8n";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // We run behind our own reverse proxy in Docker, not on a managed host.
@@ -16,17 +17,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
-      authorize(credentials) {
-        const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-        const email = typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
-        const password = typeof credentials?.password === "string" ? credentials.password : "";
-        if (!adminEmail || !email || !password) return null;
-
-        // Always run both checks so a wrong email takes as long as a wrong password.
-        const emailOk = safeEqual(email, adminEmail);
-        const passwordOk = verifyPassword(password, process.env.ADMIN_PASSWORD_HASH);
-        return emailOk && passwordOk ? { id: "admin", email: adminEmail, name: "Админ" } : null;
-      },
+      // The lockout is inside checkAdminLogin, so it also covers Auth.js's own
+      // /api/auth/callback/credentials address, not only our login form.
+      authorize: (credentials, request) => checkAdminLogin(credentials, clientAddress(request.headers)),
     }),
   ],
 });
