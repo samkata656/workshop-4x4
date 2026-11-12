@@ -170,11 +170,54 @@ If the Docker app is also running it already uses port 3000; stop it first with
 
 ## Backups
 
-Everything worth keeping is in the four volumes. To dump both databases:
+Everything worth keeping is in the four volumes; the two databases are what changes daily.
 
 ```bash
-docker compose exec postgres sh -c 'pg_dumpall -U "$POSTGRES_USER"' > backup.sql
+scripts/backup.sh           # dump both databases to ~/backups, keep the newest 14
+scripts/restore-check.sh    # load the newest dump into a throw-away Postgres and print row counts
 ```
 
-Keep a copy of `.env` somewhere safe too: without `N8N_ENCRYPTION_KEY` the n8n
-credentials in a restored backup cannot be read.
+On the server the backup runs every night from cron (a copy of the script is in `~/bin`):
+
+```
+30 3 * * *  /home/deploy/bin/workshop-backup.sh >> /home/deploy/backups/backup.log 2>&1
+```
+
+`restore-check.sh` never touches the live database: it starts its own container with no
+network, restores into it, prints how many bookings, customers, requests, vehicles, n8n
+workflows and credentials came back, and removes the container. Run it after any change to
+the backup setup, and now and then anyway — an untested backup is only a hope.
+
+To restore for real, start only Postgres with an empty volume, load the file, then start
+the rest:
+
+```bash
+zcat ~/backups/<file>.sql.gz | docker exec -i workshop-4x4-postgres-1 sh -c 'psql -U "$POSTGRES_USER" -d postgres'
+```
+
+Two things the scripts do not do for you:
+
+- **Copy backups off the server.** They sit on the same droplet as the database. Download
+  them regularly (`scp user@your-server:backups/<file> .`).
+- **Keep `.env`.** Without `N8N_ENCRYPTION_KEY` the n8n credentials in a restored backup
+  cannot be read. Keep a copy somewhere safe, outside the server and outside git.
+
+## Security notes
+
+- **Only ports 22, 80 and 443 are public**, and 22 only from the owner's IP (DigitalOcean
+  Cloud Firewall, which Docker cannot bypass the way it bypasses `ufw`). Postgres and n8n
+  publish no ports. The proxy admin (81) and Portainer (9443) listen on `127.0.0.1` and are
+  reached through an SSH tunnel.
+- **SSH:** key only, no passwords, no root login (`PermitRootLogin no`). Security updates
+  install automatically (`unattended-upgrades`).
+- **Containers and root:** the app and n8n run as the unprivileged `node` user and Postgres
+  as `postgres`. Two third-party images run as root inside their container, by design of
+  the image: NGINX Proxy Manager (it binds ports 80/443 and manages certificates) and
+  Portainer (it controls Docker through the Docker socket, which is root-equivalent on the
+  host). That is why neither admin panel is exposed to the internet.
+- **The `docker` group is root-equivalent.** The `deploy` user is in it, so the SSH key for
+  `deploy` must be protected like a root password.
+- **n8n** is behind an IP allow-list on its proxy host, and every workshop webhook checks
+  the `x-webhook-secret` header. The app reaches n8n on the internal Docker network.
+- **Secrets** live only in `.env` on the server and in Portainer's stack variables. Nothing
+  secret is in the repository or in the image.
