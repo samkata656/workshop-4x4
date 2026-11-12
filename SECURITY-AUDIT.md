@@ -16,8 +16,8 @@
 | High | 1 | 1 |
 | Medium | 3 | 3 |
 
-No critical findings. All four reported findings are fixed in the release that
-follows this audit. Seven smaller points fell below the reporting bar; one of
+No critical findings. All four reported findings are fixed in releases 1.0.5 and
+1.0.6 (the high one needed a second pass, described below). Seven smaller points fell below the reporting bar; one of
 them is fixed too, and the rest are listed at the end with the reason they are
 accepted for now.
 
@@ -47,9 +47,16 @@ opens every customer's name, phone, e-mail and car.
   real lockout (`src/lib/admin/rate-limit.ts`).
 - New tests: `tests/admin-login.test.ts`.
 
-**Checked.** The same attack was replayed against the fixed image in an isolated
-test container: after five wrong tries, the sixth was refused and so was the
-*correct* password from that address, while another address could still sign in.
+**Second pass (after release 1.0.5).** Re-testing on the live site showed the
+first fix was incomplete. Next.js bundles the login form and the `/api/auth`
+route separately, so each had its own copy of the counter: an attacker got five
+tries on each address instead of five in total. The counter is now shared by
+the whole process (`globalThis`), in the release that follows 1.0.5.
+
+**Checked.** Against the final image, in an isolated test container: three
+wrong tries through the callback address plus two through the form locked the
+address out on both. The sixth try showed the lockout message, the *correct*
+password was refused from that address, and another address could still sign in.
 
 ### 2. MEDIUM: an offer e-mail could go to someone else's address
 

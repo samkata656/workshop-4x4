@@ -5,7 +5,13 @@
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILURES = 5;
 const MAX_KEYS = 5000;
-const failures = new Map<string, number[]>();
+
+// Kept on globalThis, not in a module variable: Next.js bundles the login form's
+// server action and the /api/auth route separately, and each bundle gets its own
+// copy of this module. A plain variable would give every sign-in path its own
+// counter, so 5 tries would become 5 per path.
+const store = globalThis as typeof globalThis & { __adminLoginFailures?: Map<string, number[]> };
+const failures = (store.__adminLoginFailures ??= new Map<string, number[]>());
 
 export function isLockedOut(key: string, now = Date.now()) {
   const recent = (failures.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
