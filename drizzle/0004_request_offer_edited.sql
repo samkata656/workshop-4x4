@@ -1,0 +1,1 @@
+ALTER TABLE "requests" ADD COLUMN "offer_edited_at" timestamp with time zone;

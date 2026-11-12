@@ -386,8 +386,15 @@ body {
 .bay-calendar .rbc-day-slot .rbc-time-slot {
   border-top-color: rgb(217 209 195 / 0.05);
 }
-.bay-calendar .rbc-allday-cell {
-  display: none; /* workshop jobs are never all-day */
+.bay-calendar .rbc-allday-cell,
+.bay-calendar .rbc-resource-grouping > .rbc-row.rbc-h-full {
+  display: none; /* workshop jobs are never all-day; the second rule removes the empty band the row leaves */
+}
+/* The library pins the time column and paints it white. */
+.bay-calendar .rbc-time-view-resources .rbc-time-gutter,
+.bay-calendar .rbc-time-view-resources .rbc-time-header-gutter {
+  background-color: var(--color-carbon-raised);
+  border-right-color: var(--color-line);
 }
 .bay-calendar .rbc-header,
 .bay-calendar .rbc-label {
@@ -402,9 +409,12 @@ body {
   padding: 0.625rem 0.25rem;
   white-space: normal;
 }
-.bay-calendar .rbc-row-resource .rbc-header {
+/* Bay names. With resourceGroupingLayout they sit in the plain row after the day row. */
+.bay-calendar .rbc-row-resource .rbc-header,
+.bay-calendar .rbc-resource-grouping > .rbc-row:not(.rbc-time-header-cell):not(.rbc-h-full) .rbc-header {
   color: var(--color-paper);
   background: var(--color-olive);
+  border-bottom: 0;
 }
 .bay-calendar .rbc-today {
   background: rgb(195 106 60 / 0.07);

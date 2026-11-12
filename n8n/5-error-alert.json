@@ -1,0 +1,79 @@
+{
+  "name": "Workshop — Error alert",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "bf19ad92-bf18-4847-a9a5-9784606700c1",
+      "name": "On workflow error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        48,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "PUT_YOUR_CHAT_ID_HERE",
+        "text": "=🔴 <b>n8n: workflow failed</b>\n\n<b>Workflow:</b> {{ ($json.workflow.name || 'unknown').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }}\n<b>Failed node:</b> {{ ($json.execution?.lastNodeExecuted || 'trigger / activation').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }}\n<b>When:</b> {{ $now.setZone('Europe/Sofia').toFormat('yyyy-MM-dd HH:mm') }}\n\n<b>Error:</b>\n<code>{{ ($json.execution?.error?.message || $json.trigger?.error?.message || 'No error message').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 1500) }}</code>\n\n{{ $json.execution?.url ? 'Run: ' + $json.execution.url : '' }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "46737260-9f99-4bb4-8fa9-ec1e51a93c93",
+      "name": "Send Telegram alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        336
+      ],
+      "webhookId": "bce1709a-06e0-49e7-9781-81df4f142e68",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "telegramApi": {
+          "id": "HPuB9bZLnbmSN21e",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Error alert\nRuns when any workflow that names this one as its **Error workflow** fails, and sends the workflow name, failed node, error text and a link to the run to Telegram.\n\n**Set up:** a Telegram credential (bot token) and your chat ID in the Telegram node.\n\nIt only fires for real (production) runs, not for manual test runs in the editor.",
+        "height": 280,
+        "width": 440
+      },
+      "id": "d25ff153-49fd-451e-b323-4e4faaaa428a",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "On workflow error": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "pinData": {}
+}

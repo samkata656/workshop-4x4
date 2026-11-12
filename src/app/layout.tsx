@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Manrope, Sofia_Sans_Extra_Condensed } from "next/font/google";
+import { Suspense } from "react";
+import { ChatWidget } from "@/components/chat-widget";
 import "./globals.css";
 
 // All three families ship Cyrillic, which the Bulgarian UI needs.
@@ -32,7 +34,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="bg" className={`${display.variable} ${ui.variable} ${mono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* Reads the current path (hidden under /admin), so it needs its own boundary. */}
+        <Suspense fallback={null}>
+          <ChatWidget />
+        </Suspense>
+      </body>
     </html>
   );
 }

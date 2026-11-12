@@ -5,10 +5,12 @@ import { headers } from "next/headers";
 import { signIn } from "@/auth";
 import type { FormState } from "@/components/admin/action-form";
 import { isLockedOut, recordFailure } from "@/lib/admin/rate-limit";
+import { clientAddress } from "@/lib/n8n";
 
 export async function loginAction(_previous: FormState, formData: FormData): Promise<FormState> {
-  const forwarded = (await headers()).get("x-forwarded-for");
-  const address = forwarded?.split(",")[0].trim() || "local";
+  // The LAST x-forwarded-for entry is the one our proxy added; earlier ones are client-supplied
+  // and would let an attacker dodge the lockout by sending a new value with every guess.
+  const address = clientAddress(await headers());
   if (isLockedOut(address)) {
     return { ok: false, message: "Твърде много неуспешни опити. Изчакайте 15 минути и опитайте отново." };
   }

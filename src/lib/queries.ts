@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ilike, sql } from "drizzle-orm";
+import { and, asc, count, eq, ilike, ne, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 
 const { bays, bookings, openingHours, quotes, requests, services, vehicles } = schema;
@@ -19,10 +19,17 @@ export function listBays() {
   return getDb().select().from(bays).where(eq(bays.active, true)).orderBy(asc(bays.id));
 }
 
+/**
+ * Rows the public may choose from. A swap that the AI looked up for one customer
+ * ("Не е стоков джип?") stays out of the catalogue until the owner verifies it.
+ */
+const inCatalogue = or(eq(vehicles.verified, true), ne(vehicles.createdBy, "AI"));
+
 export function listVehicles() {
   return getDb()
     .select()
     .from(vehicles)
+    .where(inCatalogue)
     .orderBy(asc(vehicles.brand), asc(vehicles.model), asc(vehicles.yearsFrom), asc(vehicles.engineCode));
 }
 
@@ -38,6 +45,7 @@ export function searchVehicles(filter: VehicleFilter, limit: number) {
     .from(vehicles)
     .where(
       and(
+        inCatalogue,
         filter.brand ? eq(vehicles.brand, filter.brand) : undefined,
         filter.model ? ilike(vehicles.model, contains(filter.model)) : undefined,
         filter.generation ? ilike(vehicles.generation, contains(filter.generation)) : undefined,

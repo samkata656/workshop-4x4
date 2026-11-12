@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { ActionForm, SubmitButton } from "@/components/admin/action-form";
 import { AiOutput } from "@/components/admin/ai-output";
 import { FilterChips } from "@/components/admin/filter-chips";
+import { OfferDraft } from "@/components/admin/offer-draft";
 import { EmptyState, PageHeader, shortDate } from "@/components/admin/ui";
 import { updateRequestAction } from "@/lib/admin/actions";
 import { REQUEST_STATUS, REQUEST_TYPE } from "@/lib/admin/labels";
@@ -143,6 +144,19 @@ async function Inbox({ searchParams }: { searchParams: Search }) {
                       <AiOutput value={r.aiOutput} />
                     </div>
                   </div>
+
+                  {r.type === "modification" && (
+                    <OfferDraft
+                      requestId={r.id}
+                      customerEmail={r.customerEmail}
+                      subject={r.offerSubject}
+                      body={r.offerBody}
+                      items={r.offerItems}
+                      draftedAt={r.offerDraftedAt}
+                      sentAt={r.offerSentAt}
+                      sentTo={r.offerSentTo}
+                    />
+                  )}
 
                   <ActionForm action={updateRequestAction} className="grid gap-3 border-t border-line pt-4">
                     <input type="hidden" name="id" value={r.id} />

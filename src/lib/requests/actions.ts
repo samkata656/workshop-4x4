@@ -5,7 +5,7 @@ import { parseContact, type ContactErrors } from "@/lib/booking/validation";
 import { createRequest, RequestError } from "./engine";
 import type { RequestType } from "./options";
 import { parseRequestDetails, type RequestErrors } from "./validation";
-import { notifyAiOfNewRequest } from "./webhook";
+import { notifyAiOfNewRequest, requestOfferDraft } from "./webhook";
 
 export type RequestResult =
   | { ok: true; quoted: boolean }
@@ -40,7 +40,7 @@ export async function submitRequestAction(input: {
     });
     // Runs after the customer already has their answer; does nothing until the
     // n8n webhook URL is configured.
-    after(() => notifyAiOfNewRequest(saved.forAi));
+    after(() => Promise.all([notifyAiOfNewRequest(saved.forAi), requestOfferDraft(saved.forAi)]));
     return { ok: true, quoted: saved.quoteId !== null };
   } catch (error) {
     if (error instanceof RequestError) {

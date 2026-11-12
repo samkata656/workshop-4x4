@@ -12,9 +12,9 @@ import {
   type ServiceConsumable,
 } from "@/lib/booking/pricing";
 import { formatCents, formatDateLong, formatDayParts, formatDuration, formatLitresNumber } from "@/lib/format";
-import { ConsentCheckbox, Step, TextField } from "@/components/form-fields";
+import { ConsentCheckbox, Select, Step, TextField } from "@/components/form-fields";
 import { EMPTY_PICK, VehiclePicker, type PickerVehicle, type VehiclePick } from "@/components/vehicle-picker";
-import { fetchSlotsAction, submitBookingAction, submitQuoteAction, type SubmitResult } from "./actions";
+import { fetchSlotsAction, lookupNonStockAction, submitBookingAction, submitQuoteAction, type SubmitResult } from "./actions";
 
 export type VehicleOption = PricingVehicle & PickerVehicle;
 
@@ -27,13 +27,62 @@ type Props = {
 };
 
 type Errors = Partial<Record<"vehicle" | "services" | "slot" | "name" | "phone" | "email" | "consent", string>>;
+const STALE_PAGE = "Страницата е обновена или връзката прекъсна. Презаредете я и опитайте отново.";
+
 type SlotState = { status: "idle" | "loading" | "ready"; times: string[] };
+/** "Не е стоков джип?": what the picker cannot know about a swapped drivetrain, and the lookup's state. */
+type Swap = { fuel: string; transmissionType: string };
+type LookupState = { status: "idle" | "loading" | "done" | "error"; message?: string; fields?: { engine?: string; transmission?: string } };
 
 export function BookingForm({ vehicles, services, fluidPrices, consumables, days }: Props) {
   // --- 1. vehicle ----------------------------------------------------------
   const [pick, setPick] = useState<VehiclePick>(EMPTY_PICK);
-  const vehicleId = pick.vehicleId;
-  const vehicle = vehicles.find((v) => v.id === vehicleId) ?? null;
+  const [swap, setSwap] = useState<Swap>({ fuel: "", transmissionType: "" });
+  const [lookedUp, setLookedUp] = useState<VehicleOption | null>(null);
+  const [lookup, setLookup] = useState<LookupState>({ status: "idle" });
+  const lookupRequest = useRef(0);
+  // A swapped drivetrain has no catalogue row: the vehicle is the one the lookup saved.
+  const vehicle = pick.nonStock ? lookedUp : (vehicles.find((v) => v.id === pick.vehicleId) ?? null);
+  const vehicleId = vehicle?.id ?? null;
+  const canLookUp =
+    Boolean(pick.brand && pick.model && pick.generation && swap.fuel && swap.transmissionType) &&
+    pick.customEngine.trim().length >= 2 &&
+    pick.customTransmission.trim().length >= 2;
+
+  /** Any change to the described car makes an earlier lookup stale. */
+  function forgetLookup() {
+    lookupRequest.current++;
+    setLookedUp(null);
+    setLookup({ status: "idle" });
+  }
+
+  async function runLookup() {
+    const request = ++lookupRequest.current;
+    setLookedUp(null);
+    setLookup({ status: "loading" });
+    // The call itself fails when the site was updated while this page was open, or the network dropped.
+    const response = await lookupNonStockAction({
+      brand: pick.brand,
+      model: pick.model,
+      generation: pick.generation,
+      engine: pick.customEngine,
+      transmission: pick.customTransmission,
+      ...swap,
+    }).catch(() => ({ ok: false as const, message: STALE_PAGE, fieldErrors: undefined }));
+    if (request !== lookupRequest.current) return; // the customer changed the car meanwhile
+    if (!response.ok) {
+      setLookup({ status: "error", message: response.message, fields: response.fieldErrors });
+      return;
+    }
+    setLookedUp(response.vehicle);
+    setErrors((e) => ({ ...e, vehicle: undefined }));
+    setLookup({
+      status: "done",
+      message: response.capacitiesFound
+        ? "Намерихме ориентировъчни количества течности. Ще ги потвърдим в сервиза, преди да започнем работа."
+        : "Не намерихме количествата за тази комбинация. Можете да запишете час — цената на течностите ще определим след оглед.",
+    });
+  }
 
   // --- 2. services ---------------------------------------------------------
   const [serviceIds, setServiceIds] = useState<number[]>([]);
@@ -90,7 +139,11 @@ export function BookingForm({ vehicles, services, fluidPrices, consumables, days
 
   function validate(kind: "booking" | "quote"): Errors {
     const found: Errors = {};
-    if (!vehicle) found.vehicle = "Изберете автомобила до скоростна кутия, за да изчислим цената.";
+    if (!vehicle) {
+      found.vehicle = pick.nonStock
+        ? "Опишете двигателя и кутията и натиснете „Намери количествата“, за да изчислим цената."
+        : "Изберете автомобила до скоростна кутия, за да изчислим цената.";
+    }
     if (serviceIds.length === 0) found.services = "Изберете поне една услуга.";
     if (kind === "booking" && (!date || !time)) found.slot = "Изберете ден и начален час.";
     if (name.trim().length < 2) found.name = "Въведете име, за да знаем към кого да се обърнем.";
@@ -110,7 +163,9 @@ export function BookingForm({ vehicles, services, fluidPrices, consumables, days
     setPendingKind(kind);
     startTransition(async () => {
       const payload = { vehicleId, serviceIds, date, time, contact: { name, phone, email, consent } };
-      const response = kind === "booking" ? await submitBookingAction(payload) : await submitQuoteAction(payload);
+      const response = await (kind === "booking" ? submitBookingAction(payload) : submitQuoteAction(payload)).catch(
+        (): SubmitResult => ({ ok: false, message: STALE_PAGE }),
+      );
       if (response.ok) {
         setResult(response);
         window.scrollTo({ top: 0 });
@@ -143,11 +198,57 @@ export function BookingForm({ vehicles, services, fluidPrices, consumables, days
           <VehiclePicker
             vehicles={vehicles}
             value={pick}
+            allowNonStock
+            errors={lookup.fields}
             onChange={(next) => {
               setPick(next);
               setErrors((e) => ({ ...e, vehicle: undefined }));
+              if (next.nonStock || pick.nonStock) forgetLookup();
             }}
           />
+          {pick.nonStock && (
+            <div className="mt-6 border border-line p-4 sm:p-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Select
+                  label="Гориво"
+                  value={swap.fuel}
+                  options={[
+                    { value: "petrol", label: "Бензин" },
+                    { value: "diesel", label: "Дизел" },
+                  ]}
+                  onChange={(fuel) => {
+                    setSwap((s) => ({ ...s, fuel }));
+                    forgetLookup();
+                  }}
+                />
+                <Select
+                  label="Вид на кутията"
+                  value={swap.transmissionType}
+                  options={[
+                    { value: "automatic", label: "Автоматична" },
+                    { value: "manual", label: "Ръчна" },
+                  ]}
+                  onChange={(transmissionType) => {
+                    setSwap((s) => ({ ...s, transmissionType }));
+                    forgetLookup();
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost mt-5 justify-center"
+                disabled={!canLookUp || lookup.status === "loading"}
+                onClick={() => void runLookup()}
+              >
+                {lookup.status === "loading" ? "Търсим количествата…" : "Намери количествата"}
+              </button>
+              <p aria-live="polite" className={`mt-3 text-sm ${lookup.status === "error" ? "text-rust-bright" : "text-sand"}`}>
+                {lookup.status === "loading"
+                  ? "Търсим количествата на течностите за този двигател и кутия. Отнема до една минута."
+                  : (lookup.message ?? "Попълнете полетата и натиснете бутона, за да изчислим ориентировъчна цена.")}
+              </p>
+            </div>
+          )}
         </Step>
 
         {/* 2 — services */}

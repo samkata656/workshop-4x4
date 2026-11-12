@@ -14,7 +14,7 @@ import { AGENT_KEY_HEADER, checkAgentKey } from "./auth";
 import { hit, isLimited, type RateLimit } from "./rate-limit";
 
 /** All agent traffic together. n8n is the only caller, so one shared budget. */
-const REQUESTS: RateLimit = { limit: 120, windowMs: 60_000 };
+const REQUESTS: RateLimit = { limit: 120, windowMs: 60_000, shared: true };
 /** Wrong or missing keys, per address — slows down guessing. */
 const BAD_KEYS: RateLimit = { limit: 10, windowMs: 60_000 };
 const MAX_BODY_BYTES = 64 * 1024;
