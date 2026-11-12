@@ -91,6 +91,7 @@ export async function createRequest(input: {
           nonStockTransmission: details.vehicle.transmission,
         }),
         mileageKm: details.mileageKm,
+        contactEmail: contact.email,
         description: details.description,
         options: details.options,
         aiOutput: null, // filled in later by n8n

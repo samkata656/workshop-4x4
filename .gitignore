@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Local previews (e.g. the rendered offer e-mail)
 /preview/
+
+# Local security audit reports (/cso)
+/.security-reports/

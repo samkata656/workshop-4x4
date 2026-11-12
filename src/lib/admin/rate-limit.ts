@@ -4,19 +4,32 @@
  */
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILURES = 5;
+const MAX_KEYS = 5000;
 const failures = new Map<string, number[]>();
 
 export function isLockedOut(key: string, now = Date.now()) {
   const recent = (failures.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
-  failures.set(key, recent);
   return recent.length >= MAX_FAILURES;
 }
 
 export function recordFailure(key: string, now = Date.now()) {
-  failures.set(key, [...(failures.get(key) ?? []), now]);
-  if (failures.size > 5000) failures.clear(); // never grow without bound
+  const recent = (failures.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
+  failures.delete(key); // re-insert so the map stays ordered by latest failure
+  failures.set(key, [...recent, now]);
+  // Never grow without bound. Drop the addresses that failed longest ago, never
+  // everything at once: clearing the map would let a flood of fake addresses
+  // lift a real lockout.
+  for (const oldest of failures.keys()) {
+    if (failures.size <= MAX_KEYS) break;
+    failures.delete(oldest);
+  }
 }
 
 export function clearFailures(key: string) {
   failures.delete(key);
+}
+
+/** Tests only. */
+export function resetFailures() {
+  failures.clear();
 }

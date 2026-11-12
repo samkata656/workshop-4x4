@@ -1,0 +1,5 @@
+# Changes to the build and release pipeline, and to what runs on the server,
+# always ask for the owner's review.
+/.github/            @samkata656
+/docker-compose.yml  @samkata656
+/Dockerfile          @samkata656

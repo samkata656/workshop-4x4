@@ -202,7 +202,8 @@ async function listRequestRows(filter: RequestFilter) {
       customerId: customers.id,
       customerName: customers.name,
       customerPhone: customers.phone,
-      customerEmail: customers.email,
+      // The e-mail typed on this request (where an offer goes), not the one on the shared customer row.
+      customerEmail: requests.contactEmail,
       vehicle: sql<string>`case when ${requests.nonStock}
         then ${requests.nonStockBrand}::text || ' ' || ${requests.nonStockModel} || ' ' || ${requests.nonStockGeneration} || ' · ' || ${requests.nonStockEngine} || ' · ' || ${requests.nonStockTransmission}
         else coalesce((select v.brand || ' ' || v.model || ' ' || v.generation || ' · ' || v.engine_code || ' · ' || v.transmission from vehicles v where v.id = ${requests.vehicleId}), '—') end`,

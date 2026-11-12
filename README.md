@@ -221,3 +221,25 @@ Two things the scripts do not do for you:
   the `x-webhook-secret` header. The app reaches n8n on the internal Docker network.
 - **Secrets** live only in `.env` on the server and in Portainer's stack variables. Nothing
   secret is in the repository or in the image.
+- **Third-party images are pinned** to an exact version and digest in `docker-compose.yml`.
+  To upgrade one, change both in a pull request
+  (`docker buildx imagetools inspect <image>:<version>` prints the digest), and take a
+  backup first when it is n8n or Postgres.
+
+## Security audit
+
+The project was audited on 12 November 2026 with the `/cso` skill (an AI-assisted security
+audit: secrets, dependencies, CI/CD, Docker, webhooks, AI handling, access control, and the
+live server).
+
+**Result: no critical findings, one high and three medium. All four are fixed.**
+
+| # | Severity | What the audit found | What was fixed |
+|---|---|---|---|
+| 1 | High | The admin login lockout could be bypassed through Auth.js's own callback address, allowing unlimited password guesses | The lockout now sits inside the password check itself, so every sign-in path is counted |
+| 2 | Medium | An offer e-mail went to the first e-mail ever stored for a phone number, which could be a stranger's | Each request stores the e-mail typed on it, and the offer goes there |
+| 3 | Medium | Postgres, n8n and the proxy were pulled by moving tags on every release | All three are pinned to an exact version and digest |
+| 4 | Medium | No required reviewer for the release pipeline files | `.github/CODEOWNERS` added |
+
+The full report, with the proof for each finding, what came back clean, and the smaller
+points that are still open, is in [SECURITY-AUDIT.md](SECURITY-AUDIT.md).

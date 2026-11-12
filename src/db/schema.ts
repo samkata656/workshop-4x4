@@ -389,6 +389,12 @@ export const requests = pgTable(
     nonStockEngine: text("non_stock_engine"),
     nonStockTransmission: text("non_stock_transmission"),
     mileageKm: integer("mileage_km"),
+    /**
+     * The e-mail typed on THIS request. Offers go here, never to customers.email:
+     * a customer row is shared by everyone who ever typed that phone number, and
+     * keeps the first e-mail it saw, which may be someone else's.
+     */
+    contactEmail: text("contact_email"),
     /** repair: symptoms (required). modification: optional comment. */
     description: text("description"),
     /** repair: quick-pick symptoms. modification: ticked options. */

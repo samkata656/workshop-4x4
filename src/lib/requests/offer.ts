@@ -13,7 +13,7 @@ import { getDb, schema } from "@/db";
 import { N8nError, callN8n } from "@/lib/n8n";
 import { RequestError } from "./engine";
 
-const { customers, requests } = schema;
+const { requests } = schema;
 
 export const MAX_OFFER_SUBJECT = 200;
 export const MAX_OFFER_BODY = 6000;
@@ -105,10 +105,9 @@ export async function sendOffer(requestId: number): Promise<SendOfferResult> {
       status: requests.status,
       sentAt: requests.offerSentAt,
       sentTo: requests.offerSentTo,
-      to: customers.email,
+      to: requests.contactEmail,
     })
     .from(requests)
-    .innerJoin(customers, eq(customers.id, requests.customerId))
     .where(eq(requests.id, requestId))
     .limit(1);
   if (!row || !row.subject || !row.body) return { ok: false, reason: "NOT_FOUND" };

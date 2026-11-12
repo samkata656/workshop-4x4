@@ -147,4 +147,35 @@ describe("modification request", () => {
     const [{ n }] = await sql`select count(*)::int n from bookings`;
     expect(n).toBe(0);
   });
+
+  it("sends the offer to the e-mail typed on the request, not the first one stored for that phone", async () => {
+    // A stranger files a request with the victim's phone and their own e-mail first.
+    const details = { vehicle: { nonStock: false as const, vehicleId }, mileageKm: null, description: "Лебедка", options: [] };
+    await engine.createRequest({ type: "modification", contact: { ...contact, email: "stranger@example.com" }, details });
+    const real = await engine.createRequest({ type: "modification", contact, details });
+
+    // The shared customer row still holds the first e-mail...
+    const [customer] = await sql`select email from customers where phone = ${contact.phone}`;
+    expect(customer.email).toBe("stranger@example.com");
+    // ...but the request remembers its own.
+    const [row] = await sql`select contact_email from requests where id = ${real.id}`;
+    expect(row.contact_email).toBe("maria@example.bg");
+
+    const offer = await import("@/lib/requests/offer");
+    await offer.saveOfferText(real.id, "Оферта", "Здравейте, ето офертата.");
+    process.env.N8N_OFFER_EMAIL_WEBHOOK_URL = "http://n8n:5678/webhook/offer-email";
+    const realFetch = globalThis.fetch;
+    const sent: unknown[] = [];
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      sent.push(JSON.parse(String(init?.body)));
+      return Response.json({ sent: true });
+    }) as typeof fetch;
+    try {
+      expect(await offer.sendOffer(real.id)).toEqual({ ok: true, to: "maria@example.bg" });
+    } finally {
+      globalThis.fetch = realFetch;
+      delete process.env.N8N_OFFER_EMAIL_WEBHOOK_URL;
+    }
+    expect(sent).toMatchObject([{ requestId: real.id, to: "maria@example.bg" }]);
+  });
 });
