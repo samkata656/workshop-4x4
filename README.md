@@ -50,13 +50,16 @@ credentials you save in it.
 
 ### 2. Start
 
-On the server:
+On the server the app runs a **released image**: GitHub Actions builds it on every merge
+into `main` and stores it in GHCR (see [Releases](#releases)). Set `APP_VERSION` in `.env`
+to the release you want (for example `1.0.1`), then:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
-On your own machine, add the dev override so you can open the app without the proxy:
+On your own machine, add the dev override. It builds the app from the code in this folder
+and opens it without the proxy:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
@@ -112,9 +115,29 @@ After changing `.env`, run the start command again to apply it.
 ```bash
 docker compose ps                 # what is running
 docker compose logs -f app        # watch the app (use n8n, postgres or proxy for the others)
-docker compose up -d --build      # apply new code or a changed .env
+docker compose up -d              # apply a changed .env or APP_VERSION
 docker compose down               # stop; data stays in the volumes
 docker compose down -v            # stop AND delete all data (database, n8n, certificates)
+```
+
+## Releases
+
+Every change goes branch → pull request → green CI → merge. `main` is protected.
+
+1. **CI** (`.github/workflows/ci.yml`) runs on each pull request: lint, type check, unit
+   and database tests, and a Docker build.
+2. **Release** (`.github/workflows/release.yml`) runs on each merge into `main`: it builds
+   the image and pushes it to GHCR as `1.0.<run number>`, `sha-<commit>` and `latest`.
+   Nothing is deployed automatically.
+3. **Deploy** in Portainer (reached through an SSH tunnel, like the proxy admin):
+   Stacks → `workshop-4x4` → set `APP_VERSION` to the new number → Update the stack with
+   "Re-pull image" on. Database migrations run when the new container starts.
+4. **Roll back**: set `APP_VERSION` back to the previous number and update again.
+   A release that added a database migration cannot be rolled back this way; restore the
+   backup taken before it instead.
+
+```bash
+ssh -L 9443:127.0.0.1:9443 user@your-server    # then open https://127.0.0.1:9443
 ```
 
 ## Local development

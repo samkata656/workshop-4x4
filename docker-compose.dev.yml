@@ -15,6 +15,9 @@ services:
       - "127.0.0.1:5432:5432"
 
   app:
+    # Build from the code in this folder instead of downloading a release.
+    build: .
+    image: workshop-4x4:dev
     ports:
       - "127.0.0.1:3000:3000"
 
